@@ -590,7 +590,7 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX = W / 2;
     const py  = H * 0.494;
-    const PW  = 284, PH = 254;
+    const PW  = 284, PH = 274;
     const D   = 90;
 
     const push = <T extends Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>(o: T) => {
@@ -712,7 +712,7 @@ export class StartScene extends Phaser.Scene {
 
     /* ── Close button ── */
     const closeBg = push(this.add.graphics().setDepth(D));
-    const closeY  = py - PH/2 + 245;
+    const closeY  = py - PH/2 + 254;
     const drawClose = (hover: boolean) => {
       closeBg.clear();
       closeBg.lineStyle(1.5, 0xff4477, hover ? 1 : 0.7);
