@@ -45,6 +45,10 @@ export const STRINGS = {
     adTitle:     'AD PLACEHOLDER',
     adBody:      'In a real release,\nan ad would play here.',
     changeLater: 'You can change this later in the menu',
+    settings:    'SETTINGS',
+    language:    'LANGUAGE',
+    sound:       'SOUND',
+    close:       '✕  CLOSE',
   },
   tr: {
     noRecord:    'KAYIT YOK',
@@ -77,6 +81,10 @@ export const STRINGS = {
     adTitle:     'REKLAM YER TUTUCUSU',
     adBody:      'Gerçek bir sürümde\nburada reklam oynatılır.',
     changeLater: 'Bunu menüden sonra değiştirebilirsin',
+    settings:    'AYARLAR',
+    language:    'DİL',
+    sound:       'SES',
+    close:       '✕  KAPAT',
   },
 } as const;
 
