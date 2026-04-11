@@ -864,12 +864,12 @@ export class GameScene extends Phaser.Scene {
      TRAIL PARTICLES
   -------------------------------------------------------- */
   private _emitTrail(time: number) {
-    /* Emit from the nozzle area (bottom of rocket, +13 px below centre) */
+    /* Emit from the nozzle area (bottom of rocket PNG, +21 px below centre) */
     const flameColors = [this.playerColor, 0xffffff, 0xff8800, 0xffff00];
     const col = flameColors[Math.floor(Math.random() * flameColors.length)];
     const dot = this.add.circle(
-      this.player.x + Phaser.Math.Between(-3, 3),
-      this.player.y + 13 + Phaser.Math.Between(0, 6),
+      this.player.x + Phaser.Math.Between(-4, 4),
+      this.player.y + 21 + Phaser.Math.Between(0, 6),
       Phaser.Math.Between(2, 4),
       col,
       0.75,
@@ -944,41 +944,11 @@ export class GameScene extends Phaser.Scene {
      Hitbox radius (PLAYER_SIZE = 13) stays unchanged.
   -------------------------------------------------------- */
   private _buildRocket(x: number, y: number, color: number): Phaser.GameObjects.Container {
-    const g = this.add.graphics();
-    const col = color;
-    const dark = Phaser.Display.Color.IntegerToColor(col).darken(30).color;
-    const light = Phaser.Display.Color.IntegerToColor(col).lighten(40).color;
-
-    /* ── Nose cone ── */
-    g.fillStyle(light, 1);
-    g.fillTriangle(-7, -8, 7, -8, 0, -20);
-
-    /* ── Body ── */
-    g.fillStyle(col, 1);
-    g.fillRect(-6, -8, 12, 18);
-
-    /* ── Cockpit window ── */
-    g.fillStyle(0x000000, 0.6);
-    g.fillCircle(0, -3, 4);
-    g.fillStyle(0x88eeff, 0.9);
-    g.fillCircle(0, -3, 2.5);
-
-    /* ── Left fin ── */
-    g.fillStyle(dark, 1);
-    g.fillTriangle(-6, 2, -14, 10, -6, 10);
-
-    /* ── Right fin ── */
-    g.fillTriangle(6, 2, 14, 10, 6, 10);
-
-    /* ── Nozzle ── */
-    g.fillStyle(0x222244, 1);
-    g.fillRect(-5, 10, 10, 4);
-
-    /* ── Neon outline glow (thin stroke around body) ── */
-    g.lineStyle(1, col, 0.7);
-    g.strokeRect(-6, -8, 12, 18);
-
-    const container = this.add.container(x, y, [g]);
+    const img = this.add.image(0, 0, 'player-rocket')
+      .setDisplaySize(38, 42)
+      .setTint(color)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const container = this.add.container(x, y, [img]);
     return container;
   }
 }

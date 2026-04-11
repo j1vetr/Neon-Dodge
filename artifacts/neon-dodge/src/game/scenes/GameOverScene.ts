@@ -58,10 +58,11 @@ export class GameOverScene extends Phaser.Scene {
     const glow = this.add.circle(W / 2, 106, 28, skin.color, 0.1);
     this.tweens.add({ targets: glow, alpha: 0.04, duration: 900, yoyo: true, repeat: -1 });
 
-    const rg = this.add.graphics();
-    this._drawRocketGfx(rg, skin.color);
-    const rocket = this.add.container(W / 2, 106, [rg]);
-    this.tweens.add({ targets: rocket, y: 110, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const rocketImg = this.add.image(W / 2, 106, 'player-rocket')
+      .setDisplaySize(48, 54)
+      .setTint(skin.color)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: [rocketImg, glow], y: '+=4', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     /* ---- Divider ---- */
     this._divider(128);
@@ -124,43 +125,6 @@ export class GameOverScene extends Phaser.Scene {
   }
 
   /* -------- helpers -------- */
-
-  private _drawRocketGfx(g: Phaser.GameObjects.Graphics, color: number) {
-    const col   = color;
-    const dark  = Phaser.Display.Color.IntegerToColor(col).darken(30).color;
-    const light = Phaser.Display.Color.IntegerToColor(col).lighten(40).color;
-
-    g.clear();
-
-    /* Nose cone */
-    g.fillStyle(light, 1);
-    g.fillTriangle(-9, -10, 9, -10, 0, -26);
-
-    /* Body */
-    g.fillStyle(col, 1);
-    g.fillRect(-8, -10, 16, 23);
-
-    /* Cockpit window */
-    g.fillStyle(0x000000, 0.6);
-    g.fillCircle(0, -4, 5);
-    g.fillStyle(0x88eeff, 0.9);
-    g.fillCircle(0, -4, 3.5);
-
-    /* Left fin */
-    g.fillStyle(dark, 1);
-    g.fillTriangle(-8, 3, -18, 13, -8, 13);
-
-    /* Right fin */
-    g.fillTriangle(8, 3, 18, 13, 8, 13);
-
-    /* Nozzle */
-    g.fillStyle(0x222244, 1);
-    g.fillRect(-6, 13, 12, 5);
-
-    /* Neon outline */
-    g.lineStyle(1, col, 0.7);
-    g.strokeRect(-8, -10, 16, 23);
-  }
 
   private _divider(y: number) {
     const g = this.add.graphics();
