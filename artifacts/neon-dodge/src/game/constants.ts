@@ -8,7 +8,7 @@ export const GAME_WIDTH = 400;
 export const GAME_HEIGHT = 700;
 
 /* Player */
-export const PLAYER_SIZE = 18;
+export const PLAYER_SIZE = 13;
 export const PLAYER_HORIZONTAL_SPEED = 160; // base — scales per level
 export const PLAYER_START_X = GAME_WIDTH / 2;
 export const PLAYER_START_Y = GAME_HEIGHT * 0.75;

@@ -36,7 +36,7 @@ interface Obstacle {
 }
 
 interface PowerUp {
-  body: Phaser.GameObjects.Arc;
+  body: Phaser.GameObjects.Rectangle;
   icon: Phaser.GameObjects.Text;
   ring: Phaser.GameObjects.Arc;
   type: 'shield' | 'slow' | 'double';
@@ -59,6 +59,7 @@ export class GameScene extends Phaser.Scene {
 
   /* Shield */
   private shieldActive = false;
+  private invincibleUntil = 0; // i-frames after shield break
   private shieldRing!: Phaser.GameObjects.Arc;
   private shieldGlow!: Phaser.GameObjects.Arc;
 
@@ -178,7 +179,8 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(20);
 
     this.shieldIcon = this.add.text(W - 12, 30, '', {
-      fontSize: '14px', fontFamily: 'monospace', color: '#00aaff',
+      fontSize: '12px', fontFamily: 'monospace', color: '#00aaff',
+      stroke: '#003366', strokeThickness: 2,
     }).setOrigin(1, 0).setDepth(20);
 
     /* Level-up banner container */
@@ -209,6 +211,7 @@ export class GameScene extends Phaser.Scene {
     this.waveCounter = 0;
     this.passedWaveIds.clear();
     this.shieldActive = false;
+    this.invincibleUntil = 0;
     this.slowUntil = 0;
     this.doubleUntil = 0;
 
@@ -447,26 +450,45 @@ export class GameScene extends Phaser.Scene {
     const types: Array<'shield' | 'slow' | 'double'> = ['shield', 'slow', 'double'];
     const type = types[Math.floor(Math.random() * types.length)];
 
-    const colorMap = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
-    const iconMap  = { shield: '⬡', slow: '❄', double: '×2' };
+    const colorMap  = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
+    const labelMap  = { shield: 'SHIELD', slow: 'SLOW', double: '×2 PTS' };
     const color = colorMap[type];
+    const hexColor = '#' + color.toString(16).padStart(6, '0');
 
-    const x = Phaser.Math.Between(POWERUP_SIZE * 3, W - POWERUP_SIZE * 3);
-    const y = -POWERUP_SIZE * 2;
+    /* Badge dimensions */
+    const bw = type === 'double' ? 56 : 68;
+    const bh = 26;
 
-    const ring = this.add.circle(x, y, POWERUP_SIZE + 6, color, 0.12);
+    const x = Phaser.Math.Between(bw / 2 + 10, W - bw / 2 - 10);
+    const y = -bh - 10;
+
+    /* Outer pulsing ring */
+    const ring = this.add.circle(x, y, bw * 0.65, color, 0.12);
     ring.setDepth(5);
-    const body = this.add.circle(x, y, POWERUP_SIZE, color, 0.85);
+
+    /* Badge background */
+    const body = this.add.rectangle(x, y, bw, bh, 0x000000, 0.82)
+      .setStrokeStyle(2, color, 1);
     body.setDepth(6);
-    const icon = this.add.text(x, y, iconMap[type], {
-      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
+
+    /* Label text */
+    const icon = this.add.text(x, y, labelMap[type], {
+      fontSize: '13px', fontFamily: 'monospace',
+      color: hexColor, fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(7);
 
     /* Pulsing ring tween */
     this.tweens.add({
       targets: ring,
-      scaleX: 1.4, scaleY: 1.4, alpha: 0,
-      duration: 700, yoyo: false, repeat: -1, ease: 'Sine.easeOut',
+      scaleX: 1.6, scaleY: 1.6, alpha: 0,
+      duration: 800, repeat: -1, ease: 'Sine.easeOut',
+    });
+
+    /* Gentle float tween on badge */
+    this.tweens.add({
+      targets: [body, icon],
+      scaleX: 1.06, scaleY: 1.06,
+      duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     this.powerUps.push({ body, icon, ring, type, collected: false });
@@ -539,17 +561,31 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _breakShield() {
     this.shieldActive = false;
+    /* Grant invincibility frames so player passes through the obstacle */
+    this.invincibleUntil = this.time.now + 900;
     playShieldHit();
-    this.cameras.main.shake(180, 0.008);
+    this.cameras.main.shake(200, 0.010);
 
     this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 0);
     this.shieldGlow.setAlpha(0);
 
-    /* Brief white flash on shield break */
-    const flash = this.add.circle(this.player.x, this.player.y, PLAYER_SIZE * 2.5, 0xffffff, 0.8).setDepth(15);
-    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 250, onComplete: () => flash.destroy() });
+    /* Shield shatter burst */
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      const spd = Phaser.Math.Between(50, 130);
+      const px = this.player.x, py = this.player.y;
+      const shard = this.add.circle(px, py, Phaser.Math.Between(2, 4), COLOR_SHIELD, 0.9).setDepth(15);
+      this.tweens.add({
+        targets: shard,
+        x: px + Math.cos(angle) * spd,
+        y: py + Math.sin(angle) * spd,
+        alpha: 0, scaleX: 0.2, scaleY: 0.2,
+        duration: Phaser.Math.Between(250, 500),
+        onComplete: () => shard.destroy(),
+      });
+    }
 
-    this._showPopupText('SHIELD BROKEN!', '#ff4444');
+    this._showPopupText('SHIELD BROKEN!', '#00aaff');
   }
 
   /* --------------------------------------------------------
@@ -679,13 +715,24 @@ export class GameScene extends Phaser.Scene {
       this.doubleTimerTxt.setText('');
     }
 
-    this.shieldIcon.setText(this.shieldActive ? '🛡' : '');
+    /* i-frame flash: player blinks when passing through obstacle */
+    if (this.time.now < this.invincibleUntil) {
+      const blink = Math.sin(this.time.now * 0.04) > 0;
+      this.player.setAlpha(blink ? 1 : 0.25);
+    } else {
+      this.player.setAlpha(1);
+    }
+
+    this.shieldIcon.setText(this.shieldActive ? '[ SHIELD ]' : '');
   }
 
   /* --------------------------------------------------------
      COLLISION — shield absorbs first hit
   -------------------------------------------------------- */
   private _checkCollision(): boolean {
+    /* Skip during invincibility frames (after shield break) */
+    if (this.time.now < this.invincibleUntil) return false;
+
     const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75;
 
     for (const obs of this.obstacles) {
