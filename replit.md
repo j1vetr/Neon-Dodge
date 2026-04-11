@@ -16,6 +16,21 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### Neon Dodge (`artifacts/neon-dodge`)
+- **Type**: React + Vite web app (frontend only, no backend)
+- **Framework**: Phaser 3.90 (game engine) via npm + React container
+- **Path**: `artifacts/neon-dodge/src/`
+  - `game/constants.ts` — all tunable game values
+  - `game/audio.ts` — Web Audio API synth SFX
+  - `game/index.ts` — Phaser game factory
+  - `game/scenes/StartScene.ts` — animated intro screen
+  - `game/scenes/GameScene.ts` — core gameplay loop
+  - `game/scenes/GameOverScene.ts` — game over + watch ad placeholder
+  - `App.tsx` — React shell that mounts Phaser canvas
+- **Features**: tap to switch direction, neon obstacles + lasers, slow-motion near-miss, particle trail, screen shake, 5-skin system, high score in localStorage, Web Audio sound effects, responsive/mobile-ready
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

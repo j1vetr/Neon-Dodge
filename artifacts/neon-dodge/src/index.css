@@ -1,0 +1,26 @@
+/* Minimal reset — Phaser manages the entire visual layer */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050510;
+}
+
+body {
+  font-family: monospace;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+canvas {
+  display: block;
+  image-rendering: auto;
+}
