@@ -100,7 +100,7 @@ export class GameScene extends Phaser.Scene {
   private paused = false;
   private pauseOverlay!: Phaser.GameObjects.Rectangle;
   private pausePanel!: Phaser.GameObjects.Container;
-  private pauseBtn!: Phaser.GameObjects.Text;
+  private pauseBtn!: Phaser.GameObjects.Image;
   private soundToggleLabel!: Phaser.GameObjects.Text;
 
   /* Combo */
@@ -202,11 +202,11 @@ export class GameScene extends Phaser.Scene {
       stroke: '#00ffff', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(20);
 
-    /* HUD — best (top right) */
+    /* HUD — best (bottom right) */
     this.highScore = parseInt(localStorage.getItem(STORAGE_HIGHSCORE) || '0', 10);
-    this.add.text(W - 12, 14, `Best: ${this.highScore}`, {
+    this.add.text(W - 12, H - 14, `Best: ${this.highScore}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#334455',
-    }).setOrigin(1, 0).setDepth(20);
+    }).setOrigin(1, 1).setDepth(20);
 
     /* HUD — level (top left) */
     this.levelTxt = this.add.text(12, 14, 'LVL 1', {
@@ -238,12 +238,15 @@ export class GameScene extends Phaser.Scene {
     this.levelBannerContainer.setDepth(30);
     this.levelBannerContainer.setAlpha(0);
 
-    /* Pause button — top-right corner */
-    this.pauseBtn = this.add.text(W - 14, 14, 'II', {
-      fontSize: '15px', fontFamily: 'monospace', color: '#aabbcc',
-    }).setOrigin(1, 0).setDepth(25).setInteractive({ useHandCursor: true });
-    this.pauseBtn.on('pointerover', () => this.pauseBtn.setColor('#ffffff'));
-    this.pauseBtn.on('pointerout', () => this.pauseBtn.setColor('#aabbcc'));
+    /* Pause button — top-right corner (hamburger icon PNG) */
+    this.pauseBtn = this.add.image(W - 14, 14, 'icon-menu')
+      .setOrigin(1, 0)
+      .setDisplaySize(22, 22)
+      .setTint(0xaabbcc)
+      .setDepth(25)
+      .setInteractive({ useHandCursor: true });
+    this.pauseBtn.on('pointerover', () => this.pauseBtn.setTint(0xffffff));
+    this.pauseBtn.on('pointerout',  () => this.pauseBtn.setTint(0xaabbcc));
     this.pauseBtn.on('pointerdown', () => this._togglePause());
 
     /* Build pause panel (hidden by default) */
@@ -813,11 +816,11 @@ export class GameScene extends Phaser.Scene {
       this.pauseOverlay.setVisible(true);
       this.pausePanel.setVisible(true);
       /* Dim the pause button while paused */
-      this.pauseBtn.setColor('#555566');
+      this.pauseBtn.setTint(0x555566);
     } else {
       this.pauseOverlay.setVisible(false);
       this.pausePanel.setVisible(false);
-      this.pauseBtn.setColor('#aabbcc');
+      this.pauseBtn.setTint(0xaabbcc);
       if (isSoundEnabled()) startAmbient(this.currentLevel);
     }
   }
