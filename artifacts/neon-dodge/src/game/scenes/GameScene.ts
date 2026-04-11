@@ -1,13 +1,9 @@
 
 /* =========================================================
    GAME SCENE
-   Core gameplay: auto-upward scroll, tap to switch direction,
-   obstacles, lasers, level system, particles, screen shake.
-
-   CHANGE LOG:
-   - Slow-motion REMOVED entirely — game speed never changes mid-play
-   - Level system added: every LEVEL_DURATION seconds → new level
-     Each level has its own speed, spawn rate, gap size, wall colour
+   Core gameplay: auto-scroll, tap to switch direction,
+   obstacles, lasers, power-ups, combo, near-miss,
+   scrolling stars, shield, slow, double-points.
    ========================================================= */
 
 import Phaser from 'phaser';
@@ -18,16 +14,33 @@ import {
   OBSTACLE_THICKNESS, LASER_THICKNESS, LASER_WARN_DURATION, LASER_STARTS_AT_LEVEL,
   TRAIL_PARTICLE_LIFETIME, TRAIL_EMIT_INTERVAL,
   SHAKE_DURATION, SHAKE_INTENSITY,
-  COLOR_BG, COLOR_LASER,
-  SKINS, STORAGE_HIGHSCORE,
+  COLOR_BG, COLOR_LASER, COLOR_SHIELD, COLOR_SLOW, COLOR_DOUBLE,
+  SKINS, STORAGE_HIGHSCORE, STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
+  COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5,
+  NEAR_MISS_DISTANCE, NEAR_MISS_BONUS,
+  POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_SLOW_DURATION, POWERUP_DOUBLE_DURATION,
 } from '../constants';
-import { playTap, playHit, playScore, playLaserWarn } from '../audio';
+import {
+  playTap, playHit, playScore, playLaserWarn,
+  playCombo, playNearMiss, playPowerUp, playShieldHit,
+  startAmbient, updateAmbientLevel, stopAmbient,
+} from '../audio';
 
 /* ---- Types ---- */
 interface Obstacle {
   body: Phaser.GameObjects.Rectangle;
   isLaser: boolean;
-  born?: number; // real timestamp when laser becomes lethal
+  born?: number;
+  waveId: number;
+  passed?: boolean;
+}
+
+interface PowerUp {
+  body: Phaser.GameObjects.Arc;
+  icon: Phaser.GameObjects.Text;
+  ring: Phaser.GameObjects.Arc;
+  type: 'shield' | 'slow' | 'double';
+  collected: boolean;
 }
 
 interface TrailParticle {
@@ -44,13 +57,34 @@ export class GameScene extends Phaser.Scene {
   private dirX = 1;
   private playerVX = 0;
 
+  /* Shield */
+  private shieldActive = false;
+  private shieldRing!: Phaser.GameObjects.Arc;
+  private shieldGlow!: Phaser.GameObjects.Arc;
+
   /* Obstacles */
   private obstacles: Obstacle[] = [];
   private spawnTimer = 0;
+  private waveCounter = 0;
+  private passedWaveIds = new Set<number>();
+
+  /* Power-ups */
+  private powerUps: PowerUp[] = [];
+  private slowUntil = 0;
+  private doubleUntil = 0;
+
+  /* Power-up HUD */
+  private slowTimerTxt!: Phaser.GameObjects.Text;
+  private doubleTimerTxt!: Phaser.GameObjects.Text;
+  private shieldIcon!: Phaser.GameObjects.Text;
 
   /* Trail */
   private trailParticles: TrailParticle[] = [];
   private lastTrailTime = 0;
+
+  /* Stars (scrolling) */
+  private stars: Phaser.GameObjects.Arc[] = [];
+  private starSpeeds: number[] = [];
 
   /* Score / time */
   private score = 0;
@@ -58,19 +92,22 @@ export class GameScene extends Phaser.Scene {
   private scoreTxt!: Phaser.GameObjects.Text;
   private highScore = 0;
 
+  /* Combo */
+  private combo = 0;
+  private maxCombo = 0;
+  private comboMultiplier = 1;
+  private comboHUD!: Phaser.GameObjects.Text;
+  private lastComboTier = 0;
+
   /* Level system */
-  private currentLevel = 0;        // index into LEVELS[]
-  private levelDef!: LevelDef;     // current level config
+  private currentLevel = 0;
+  private levelDef!: LevelDef;
   private levelTxt!: Phaser.GameObjects.Text;
   private levelBannerContainer!: Phaser.GameObjects.Container;
 
   /* State */
   private alive = true;
-
-  /* Input debounce */
   private lastTapTime = 0;
-
-  /* Skin */
   private skinIndex = 0;
 
   constructor() { super({ key: 'GameScene' }); }
@@ -88,11 +125,16 @@ export class GameScene extends Phaser.Scene {
 
     /* Background */
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
-    this._createStars();
+    this._createScrollingStars();
     this._createGrid();
-
-    /* Side walls */
     this._drawSideWalls();
+
+    /* Shield glow (behind player, hidden until active) */
+    this.shieldGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 18, COLOR_SHIELD, 0);
+    this.shieldGlow.setDepth(8);
+    this.shieldRing = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 12, COLOR_SHIELD, 0);
+    this.shieldRing.setDepth(9);
+    this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 0);
 
     /* Player glow ring (behind player) */
     this.playerGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 10, this.playerColor, 0.12);
@@ -103,14 +145,14 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(10);
 
     /* HUD — score (center top) */
-    this.scoreTxt = this.add.text(W / 2, 28, '0s', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#ffffff',
+    this.scoreTxt = this.add.text(W / 2, 28, '0', {
+      fontSize: '26px', fontFamily: 'monospace', color: '#ffffff',
       stroke: '#00ffff', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(20);
 
     /* HUD — best (top right) */
     this.highScore = parseInt(localStorage.getItem(STORAGE_HIGHSCORE) || '0', 10);
-    this.add.text(W - 12, 14, `Best: ${this.highScore}s`, {
+    this.add.text(W - 12, 14, `Best: ${this.highScore}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#334455',
     }).setOrigin(1, 0).setDepth(20);
 
@@ -119,7 +161,27 @@ export class GameScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#ff2060',
     }).setOrigin(0, 0).setDepth(20);
 
-    /* Level-up banner container (initially hidden) */
+    /* HUD — combo (top left, below level) */
+    this.comboHUD = this.add.text(12, 32, '', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#ffcc00',
+    }).setOrigin(0, 0).setDepth(20);
+
+    /* HUD — power-up timers */
+    this.slowTimerTxt = this.add.text(W / 2, 50, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#cc88ff',
+      stroke: '#440088', strokeThickness: 1,
+    }).setOrigin(0.5).setDepth(20);
+
+    this.doubleTimerTxt = this.add.text(W / 2, 64, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ffcc00',
+      stroke: '#885500', strokeThickness: 1,
+    }).setOrigin(0.5).setDepth(20);
+
+    this.shieldIcon = this.add.text(W - 12, 30, '', {
+      fontSize: '14px', fontFamily: 'monospace', color: '#00aaff',
+    }).setOrigin(1, 0).setDepth(20);
+
+    /* Level-up banner container */
     this.levelBannerContainer = this.add.container(W / 2, H / 2);
     this.levelBannerContainer.setDepth(30);
     this.levelBannerContainer.setAlpha(0);
@@ -134,14 +196,26 @@ export class GameScene extends Phaser.Scene {
     this.elapsedTime = 0;
     this.spawnTimer = 0;
     this.obstacles = [];
+    this.powerUps = [];
     this.trailParticles = [];
     this.dirX = 1;
     this.currentLevel = 0;
     this.levelDef = LEVELS[0];
     this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult;
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.comboMultiplier = 1;
+    this.lastComboTier = 0;
+    this.waveCounter = 0;
+    this.passedWaveIds.clear();
+    this.shieldActive = false;
+    this.slowUntil = 0;
+    this.doubleUntil = 0;
 
-    /* Update level label colour */
     this._updateLevelLabel();
+
+    /* Start ambient rhythm */
+    startAmbient(0);
   }
 
   /* --------------------------------------------------------
@@ -157,7 +231,6 @@ export class GameScene extends Phaser.Scene {
     this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult * this.dirX;
     playTap();
 
-    /* Quick scale flash */
     this.tweens.add({
       targets: this.player,
       scaleX: 1.35, scaleY: 1.35,
@@ -173,6 +246,7 @@ export class GameScene extends Phaser.Scene {
 
     const dt = delta / 1000;
     this.elapsedTime += dt;
+    const now = this.time.now;
 
     /* ------- Level progression ------- */
     const targetLevel = Math.min(
@@ -185,12 +259,13 @@ export class GameScene extends Phaser.Scene {
       this._onLevelUp();
     }
 
-    /* ------- Score display (whole seconds) ------- */
-    const newScore = Math.floor(this.elapsedTime);
+    /* ------- Score (points per second × multipliers) ------- */
+    const rawSec = Math.floor(this.elapsedTime);
+    const newScore = rawSec * this.comboMultiplier * (now < this.doubleUntil ? 2 : 1);
     if (newScore > this.score) {
       this.score = newScore;
-      this.scoreTxt.setText(`${this.score}s`);
-      if (this.score % 5 === 0) playScore(this.score / 5);
+      this.scoreTxt.setText(`${this.score}`);
+      if (rawSec % 5 === 0 && rawSec > 0) playScore(rawSec / 5);
     }
 
     /* ------- Player horizontal movement ------- */
@@ -203,6 +278,13 @@ export class GameScene extends Phaser.Scene {
     this.player.x = clamped;
     this.playerGlow.x = clamped;
     this.playerGlow.y = this.player.y;
+    this.shieldRing.x = clamped;
+    this.shieldRing.y = this.player.y;
+    this.shieldGlow.x = clamped;
+    this.shieldGlow.y = this.player.y;
+
+    /* ------- Scrolling stars ------- */
+    this._updateScrollingStars(dt);
 
     /* ------- Spawn obstacles ------- */
     this.spawnTimer += delta;
@@ -211,13 +293,20 @@ export class GameScene extends Phaser.Scene {
       this._spawnObstacle(time);
     }
 
-    /* ------- Move obstacles ------- */
+    /* ------- Move obstacles (with near-miss + combo) ------- */
     this._updateObstacles(dt, time);
 
-    /* ------- Collision ------- */
+    /* ------- Move power-ups ------- */
+    this._updatePowerUps(dt);
+
+    /* ------- Collision (shield-aware) ------- */
     if (this._checkCollision()) {
-      this._onDeath();
-      return;
+      if (this.shieldActive) {
+        this._breakShield();
+      } else {
+        this._onDeath();
+        return;
+      }
     }
 
     /* ------- Trail ------- */
@@ -229,60 +318,60 @@ export class GameScene extends Phaser.Scene {
 
     /* ------- Glow pulse ------- */
     this.playerGlow.setRadius(PLAYER_SIZE + 8 + Math.sin(time * 0.005) * 4);
+    if (this.shieldActive) {
+      const pulse = 0.25 + 0.15 * Math.sin(time * 0.012);
+      this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, pulse + 0.5);
+      this.shieldGlow.setAlpha(pulse);
+    }
+
+    /* ------- Power-up timer HUD ------- */
+    this._updatePowerUpHUD(now);
   }
 
   /* --------------------------------------------------------
      LEVEL UP
   -------------------------------------------------------- */
   private _onLevelUp() {
-    /* Update HUD label */
     this._updateLevelLabel();
-
-    /* Sound: two rising tones */
     playScore(this.currentLevel);
+    updateAmbientLevel(this.currentLevel);
 
-    /* Flash the camera briefly */
-    this.cameras.main.flash(280, 10, 10, 10);
+    this.cameras.main.flash(320, 20, 20, 20);
 
-    /* "LEVEL X" banner animation */
     const W = GAME_WIDTH;
     const def = this.levelDef;
     const hexColor = '#' + def.wallColor.toString(16).padStart(6, '0');
 
-    /* Clear previous banner children */
     this.levelBannerContainer.removeAll(true);
     this.levelBannerContainer.setAlpha(0);
     this.levelBannerContainer.setPosition(W / 2, GAME_HEIGHT * 0.42);
 
-    /* Background pill */
-    const pill = this.add.rectangle(0, 0, 240, 52, 0x000000, 0.7);
+    const pill = this.add.rectangle(0, 0, 260, 60, 0x000000, 0.78);
     pill.setStrokeStyle(2, def.wallColor, 1);
     this.levelBannerContainer.add(pill);
 
-    /* Level label */
-    const txt = this.add.text(0, -10, def.label, {
-      fontSize: '22px', fontFamily: 'monospace',
+    const txt = this.add.text(0, -12, def.label, {
+      fontSize: '26px', fontFamily: 'monospace',
       color: hexColor, stroke: hexColor, strokeThickness: 1,
     }).setOrigin(0.5);
     this.levelBannerContainer.add(txt);
 
-    /* Speed sub-label */
-    const sub = this.add.text(0, 14, `SPEED ×${def.playerSpeedMult.toFixed(2)}`, {
+    const sub = this.add.text(0, 16, `SPEED ×${def.playerSpeedMult.toFixed(2)}`, {
       fontSize: '11px', fontFamily: 'monospace', color: '#667788',
     }).setOrigin(0.5);
     this.levelBannerContainer.add(sub);
 
-    /* Fade-in → hold → fade-out */
+    /* Zoom-in + fade */
+    this.levelBannerContainer.setScale(0.6);
     this.tweens.add({
       targets: this.levelBannerContainer,
-      alpha: 1,
-      duration: 200,
-      ease: 'Power2',
+      alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 220, ease: 'Back.Out',
       onComplete: () => {
         this.time.delayedCall(900, () => {
           this.tweens.add({
             targets: this.levelBannerContainer,
-            alpha: 0,
+            alpha: 0, scaleX: 1.1, scaleY: 1.1,
             duration: 300,
           });
         });
@@ -298,44 +387,39 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     OBSTACLE SPAWNING — uses current level's config
+     OBSTACLE SPAWNING
   -------------------------------------------------------- */
   private _spawnObstacle(time: number) {
     const W = GAME_WIDTH;
     const def = this.levelDef;
-
-    /* Lasers only appear from LASER_STARTS_AT_LEVEL onwards */
-    const lasersUnlocked = this.currentLevel >= LASER_STARTS_AT_LEVEL - 1;
-    const isLaser = lasersUnlocked && Math.random() > 0.70;
+    const waveId = ++this.waveCounter;
     const y = -20;
 
+    const lasersUnlocked = this.currentLevel >= LASER_STARTS_AT_LEVEL - 1;
+    const isLaser = lasersUnlocked && Math.random() > 0.70;
+
     if (isLaser) {
-      /* Laser has a narrow gap the player must pass through */
       const gapSize = Phaser.Math.Between(PLAYER_SIZE * 3, PLAYER_SIZE * 4);
       const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
 
       const leftW = gapX;
-      const leftX = leftW / 2;
-      const laserLeft = this.add.rectangle(leftX, y, leftW, LASER_THICKNESS, COLOR_LASER, 0.25);
-
+      const laserLeft = this.add.rectangle(leftW / 2, y, leftW, LASER_THICKNESS, COLOR_LASER, 0.25);
       const rightW = W - gapX - gapSize;
       const rightX = gapX + gapSize + rightW / 2;
       const laserRight = this.add.rectangle(rightX, y, rightW, LASER_THICKNESS, COLOR_LASER, 0.25);
 
       const born = time + LASER_WARN_DURATION;
       this.obstacles.push(
-        { body: laserLeft,  isLaser: true, born },
-        { body: laserRight, isLaser: true, born },
+        { body: laserLeft,  isLaser: true, born, waveId },
+        { body: laserRight, isLaser: true, born, waveId },
       );
       playLaserWarn();
     } else {
-      /* Use current level's gap range */
       const gapSize = Phaser.Math.Between(def.gapMin, def.gapMax);
       const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
 
       const leftW = gapX;
-      const leftX = leftW / 2;
-      const left = this.add.rectangle(leftX, y, leftW, OBSTACLE_THICKNESS, def.wallColor, 1);
+      const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, def.wallColor, 1);
       left.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
 
       const rightW = W - gapX - gapSize;
@@ -344,17 +428,136 @@ export class GameScene extends Phaser.Scene {
       right.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
 
       this.obstacles.push(
-        { body: left, isLaser: false },
-        { body: right, isLaser: false },
+        { body: left,  isLaser: false, waveId },
+        { body: right, isLaser: false, waveId },
       );
+    }
+
+    /* Maybe spawn a power-up too */
+    if (Math.random() < POWERUP_SPAWN_CHANCE) {
+      this._spawnPowerUp();
     }
   }
 
   /* --------------------------------------------------------
-     OBSTACLE UPDATE — speed from current level def
+     POWER-UP SPAWNING
+  -------------------------------------------------------- */
+  private _spawnPowerUp() {
+    const W = GAME_WIDTH;
+    const types: Array<'shield' | 'slow' | 'double'> = ['shield', 'slow', 'double'];
+    const type = types[Math.floor(Math.random() * types.length)];
+
+    const colorMap = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
+    const iconMap  = { shield: '⬡', slow: '❄', double: '×2' };
+    const color = colorMap[type];
+
+    const x = Phaser.Math.Between(POWERUP_SIZE * 3, W - POWERUP_SIZE * 3);
+    const y = -POWERUP_SIZE * 2;
+
+    const ring = this.add.circle(x, y, POWERUP_SIZE + 6, color, 0.12);
+    ring.setDepth(5);
+    const body = this.add.circle(x, y, POWERUP_SIZE, color, 0.85);
+    body.setDepth(6);
+    const icon = this.add.text(x, y, iconMap[type], {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff',
+    }).setOrigin(0.5).setDepth(7);
+
+    /* Pulsing ring tween */
+    this.tweens.add({
+      targets: ring,
+      scaleX: 1.4, scaleY: 1.4, alpha: 0,
+      duration: 700, yoyo: false, repeat: -1, ease: 'Sine.easeOut',
+    });
+
+    this.powerUps.push({ body, icon, ring, type, collected: false });
+  }
+
+  /* --------------------------------------------------------
+     POWER-UP UPDATE
+  -------------------------------------------------------- */
+  private _updatePowerUps(dt: number) {
+    const speed = this.levelDef.scrollSpeed * 0.55;
+    const toRemove: number[] = [];
+
+    for (let i = this.powerUps.length - 1; i >= 0; i--) {
+      const pu = this.powerUps[i];
+      if (pu.collected) { toRemove.push(i); continue; }
+
+      pu.body.y += speed * dt;
+      pu.icon.y += speed * dt;
+      pu.ring.y  += speed * dt;
+
+      /* Collect check */
+      const dx = this.player.x - pu.body.x;
+      const dy = this.player.y - pu.body.y;
+      if (dx * dx + dy * dy < (PLAYER_SIZE + POWERUP_SIZE) * (PLAYER_SIZE + POWERUP_SIZE)) {
+        this._collectPowerUp(pu);
+        toRemove.push(i);
+        continue;
+      }
+
+      if (pu.body.y > GAME_HEIGHT + 40) {
+        pu.body.destroy(); pu.icon.destroy(); pu.ring.destroy();
+        toRemove.push(i);
+      }
+    }
+    toRemove.forEach(i => this.powerUps.splice(i, 1));
+  }
+
+  private _collectPowerUp(pu: PowerUp) {
+    pu.collected = true;
+    playPowerUp(pu.type);
+
+    /* Flash */
+    const colorMap = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
+    const c = colorMap[pu.type];
+    const flash = this.add.circle(pu.body.x, pu.body.y, POWERUP_SIZE * 2.5, c, 0.6).setDepth(15);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 280, onComplete: () => flash.destroy() });
+
+    pu.body.destroy(); pu.icon.destroy(); pu.ring.destroy();
+
+    if (pu.type === 'shield') {
+      this.shieldActive = true;
+      this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 1);
+      this.shieldGlow.setAlpha(0.2);
+    } else if (pu.type === 'slow') {
+      this.slowUntil = this.time.now + POWERUP_SLOW_DURATION;
+    } else if (pu.type === 'double') {
+      this.doubleUntil = this.time.now + POWERUP_DOUBLE_DURATION;
+    }
+
+    this._showPopupText(
+      pu.type === 'shield' ? '🛡 SHIELD!' :
+      pu.type === 'slow'   ? '❄ SLOW!' :
+                             '×2 DOUBLE!',
+      '#' + c.toString(16).padStart(6, '0'),
+    );
+  }
+
+  /* --------------------------------------------------------
+     SHIELD BREAK
+  -------------------------------------------------------- */
+  private _breakShield() {
+    this.shieldActive = false;
+    playShieldHit();
+    this.cameras.main.shake(180, 0.008);
+
+    this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 0);
+    this.shieldGlow.setAlpha(0);
+
+    /* Brief white flash on shield break */
+    const flash = this.add.circle(this.player.x, this.player.y, PLAYER_SIZE * 2.5, 0xffffff, 0.8).setDepth(15);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: 2.5, scaleY: 2.5, duration: 250, onComplete: () => flash.destroy() });
+
+    this._showPopupText('SHIELD BROKEN!', '#ff4444');
+  }
+
+  /* --------------------------------------------------------
+     OBSTACLE UPDATE — near-miss + combo tracking
   -------------------------------------------------------- */
   private _updateObstacles(dt: number, time: number) {
-    const speed = this.levelDef.scrollSpeed;
+    const rawSpeed = this.levelDef.scrollSpeed;
+    const speed = rawSpeed * (this.time.now < this.slowUntil ? 0.38 : 1);
     const toRemove: number[] = [];
 
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
@@ -364,12 +567,30 @@ export class GameScene extends Phaser.Scene {
       if (obs.isLaser) {
         const active = obs.born != null && time >= obs.born;
         if (!active) {
-          /* Flickering warning colour — orange tint */
           const flicker = 0.15 + 0.35 * Math.sin(time * 0.025);
           obs.body.setFillStyle(0xff4400, flicker);
         } else {
-          /* Keep each piece at its spawned width — do NOT override with full-screen size */
           obs.body.setFillStyle(COLOR_LASER, 0.92);
+        }
+      }
+
+      /* Near-miss + combo: first time obstacle row crosses PLAYER_START_Y */
+      if (!obs.passed && obs.body.y > PLAYER_START_Y) {
+        obs.passed = true;
+
+        /* Check near miss (only for non-laser) */
+        if (!obs.isLaser) {
+          const nearX = Phaser.Math.Clamp(this.player.x, obs.body.x - obs.body.displayWidth / 2, obs.body.x + obs.body.displayWidth / 2);
+          const distX = Math.abs(this.player.x - nearX);
+          if (distX > 0 && distX < NEAR_MISS_DISTANCE) {
+            this._onNearMiss();
+          }
+        }
+
+        /* Combo: count wave once when first block of that wave passes */
+        if (!this.passedWaveIds.has(obs.waveId)) {
+          this.passedWaveIds.add(obs.waveId);
+          this._incrementCombo();
         }
       }
 
@@ -382,7 +603,87 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     COLLISION
+     NEAR MISS
+  -------------------------------------------------------- */
+  private _onNearMiss() {
+    playNearMiss();
+    const bonus = NEAR_MISS_BONUS * (this.time.now < this.doubleUntil ? 2 : 1);
+    this.score += bonus;
+    this.scoreTxt.setText(`${this.score}`);
+    this._showPopupText(`+${bonus} CLOSE!`, '#ff8800');
+  }
+
+  /* --------------------------------------------------------
+     COMBO
+  -------------------------------------------------------- */
+  private _incrementCombo() {
+    this.combo++;
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+    const tier =
+      this.combo >= COMBO_X5 ? 4 :
+      this.combo >= COMBO_X4 ? 3 :
+      this.combo >= COMBO_X3 ? 2 :
+      this.combo >= COMBO_X2 ? 1 : 0;
+
+    this.comboMultiplier = tier === 0 ? 1 : tier + 1;
+
+    if (tier > 0) {
+      this.comboHUD.setText(`×${this.comboMultiplier} COMBO`);
+      const colors = ['', '#ffcc00', '#ff8800', '#ff00ff', '#00ffff'];
+      this.comboHUD.setStyle({ color: colors[tier] });
+    } else {
+      this.comboHUD.setText('');
+    }
+
+    if (tier > this.lastComboTier) {
+      this.lastComboTier = tier;
+      playCombo(tier);
+      this._showPopupText(`×${this.comboMultiplier} COMBO!`, '#ffcc00');
+    }
+  }
+
+  /* --------------------------------------------------------
+     POPUP TEXT
+  -------------------------------------------------------- */
+  private _showPopupText(text: string, color: string) {
+    const W = GAME_WIDTH;
+    const x = Phaser.Math.Between(W * 0.25, W * 0.75);
+    const y = PLAYER_START_Y - 30;
+    const t = this.add.text(x, y, text, {
+      fontSize: '15px', fontFamily: 'monospace', color,
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(25);
+    this.tweens.add({
+      targets: t, y: y - 50, alpha: 0,
+      duration: 800, ease: 'Power2',
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  /* --------------------------------------------------------
+     POWER-UP HUD UPDATE
+  -------------------------------------------------------- */
+  private _updatePowerUpHUD(now: number) {
+    if (now < this.slowUntil) {
+      const secs = ((this.slowUntil - now) / 1000).toFixed(1);
+      this.slowTimerTxt.setText(`❄ SLOW ${secs}s`);
+    } else {
+      this.slowTimerTxt.setText('');
+    }
+
+    if (now < this.doubleUntil) {
+      const secs = ((this.doubleUntil - now) / 1000).toFixed(1);
+      this.doubleTimerTxt.setText(`×2 DOUBLE ${secs}s`);
+    } else {
+      this.doubleTimerTxt.setText('');
+    }
+
+    this.shieldIcon.setText(this.shieldActive ? '🛡' : '');
+  }
+
+  /* --------------------------------------------------------
+     COLLISION — shield absorbs first hit
   -------------------------------------------------------- */
   private _checkCollision(): boolean {
     const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75;
@@ -405,6 +706,11 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _onDeath() {
     this.alive = false;
+    stopAmbient();
+
+    /* Reset combo on death */
+    this.combo = 0;
+    this.comboMultiplier = 1;
 
     playHit();
     this.cameras.main.shake(SHAKE_DURATION, SHAKE_INTENSITY);
@@ -413,6 +719,18 @@ export class GameScene extends Phaser.Scene {
     if (this.score > this.highScore) {
       this.highScore = this.score;
       localStorage.setItem(STORAGE_HIGHSCORE, String(this.highScore));
+    }
+
+    /* Save stats */
+    const gamesPlayed = parseInt(localStorage.getItem(STORAGE_GAMES_PLAYED) || '0', 10) + 1;
+    localStorage.setItem(STORAGE_GAMES_PLAYED, String(gamesPlayed));
+
+    const totalTime = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0') + this.elapsedTime;
+    localStorage.setItem(STORAGE_TOTAL_TIME, String(totalTime.toFixed(1)));
+
+    const prevMax = parseInt(localStorage.getItem(STORAGE_MAX_COMBO) || '0', 10);
+    if (this.maxCombo > prevMax) {
+      localStorage.setItem(STORAGE_MAX_COMBO, String(this.maxCombo));
     }
 
     /* Shrink & fade player */
@@ -425,13 +743,13 @@ export class GameScene extends Phaser.Scene {
     /* Explosion particles */
     for (let i = 0; i < 22; i++) {
       const angle = (i / 22) * Math.PI * 2;
-      const speed = Phaser.Math.Between(60, 220);
-      const px = this.player.x, py = this.player.y;
-      const dot = this.add.circle(px, py, Phaser.Math.Between(2, 5), this.playerColor, 1);
+      const spd = Phaser.Math.Between(60, 220);
+      const ex = this.player.x, ey = this.player.y;
+      const dot = this.add.circle(ex, ey, Phaser.Math.Between(2, 5), this.playerColor, 1);
       this.tweens.add({
         targets: dot,
-        x: px + Math.cos(angle) * speed,
-        y: py + Math.sin(angle) * speed,
+        x: ex + Math.cos(angle) * spd,
+        y: ey + Math.sin(angle) * spd,
         alpha: 0, scaleX: 0.1, scaleY: 0.1,
         duration: Phaser.Math.Between(300, 650),
         ease: 'Power2',
@@ -445,6 +763,8 @@ export class GameScene extends Phaser.Scene {
         best: this.highScore,
         skin: this.skinIndex,
         level: this.currentLevel + 1,
+        maxCombo: this.maxCombo,
+        elapsedTime: Math.floor(this.elapsedTime),
       });
     });
   }
@@ -480,13 +800,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     VISUALS
+     SCROLLING STARS
   -------------------------------------------------------- */
-  private _createStars() {
+  private _createScrollingStars() {
     for (let i = 0; i < 60; i++) {
       const x = Phaser.Math.Between(0, GAME_WIDTH);
       const y = Phaser.Math.Between(0, GAME_HEIGHT);
-      this.add.circle(x, y, Math.random() * 1.2 + 0.2, 0xffffff, Math.random() * 0.5 + 0.05);
+      const r = Math.random() * 1.2 + 0.2;
+      const alpha = Math.random() * 0.4 + 0.05;
+      const star = this.add.circle(x, y, r, 0xffffff, alpha);
+      this.stars.push(star);
+      /* base scroll speed 20–60 px/s */
+      this.starSpeeds.push(20 + Math.random() * 40);
+    }
+  }
+
+  private _updateScrollingStars(dt: number) {
+    /* Stars speed up with level: level 0 → 1×, level 9 → 3× */
+    const speedMult = 1 + this.currentLevel * 0.22;
+    for (let i = 0; i < this.stars.length; i++) {
+      this.stars[i].y += this.starSpeeds[i] * speedMult * dt;
+      if (this.stars[i].y > GAME_HEIGHT + 4) {
+        this.stars[i].y = -4;
+        this.stars[i].x = Phaser.Math.Between(0, GAME_WIDTH);
+      }
     }
   }
 

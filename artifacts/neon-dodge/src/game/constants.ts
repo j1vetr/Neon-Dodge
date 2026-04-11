@@ -80,6 +80,9 @@ export const COLOR_WALL = 0xff2060;
 export const COLOR_LASER = 0xffff00;
 export const COLOR_SCORE = 0xffffff;
 export const COLOR_TRAIL = 0x00ffff;
+export const COLOR_SHIELD = 0x00aaff;
+export const COLOR_SLOW = 0xaa00ff;
+export const COLOR_DOUBLE = 0xffcc00;
 
 /* Skins — player colours */
 export const SKINS = [
@@ -90,5 +93,25 @@ export const SKINS = [
   { name: 'White',   color: 0xffffff, hex: '#ffffff' },
 ];
 
-export const STORAGE_HIGHSCORE = 'neonDodge_highScore';
-export const STORAGE_SKIN      = 'neonDodge_skin';
+/* Storage keys */
+export const STORAGE_HIGHSCORE   = 'neonDodge_highScore';
+export const STORAGE_SKIN        = 'neonDodge_skin';
+export const STORAGE_GAMES_PLAYED = 'neonDodge_gamesPlayed';
+export const STORAGE_TOTAL_TIME  = 'neonDodge_totalTime';
+export const STORAGE_MAX_COMBO   = 'neonDodge_maxCombo';
+
+/* Combo system */
+export const COMBO_X2 = 3;   // obstacles cleared for x2
+export const COMBO_X3 = 7;   // obstacles cleared for x3
+export const COMBO_X4 = 12;  // obstacles cleared for x4
+export const COMBO_X5 = 18;  // obstacles cleared for x5
+
+/* Near miss */
+export const NEAR_MISS_DISTANCE = 34; // px from nearest obstacle edge to trigger
+export const NEAR_MISS_BONUS = 50;
+
+/* Power-ups */
+export const POWERUP_SIZE = 14;
+export const POWERUP_SPAWN_CHANCE = 0.18; // per obstacle wave
+export const POWERUP_SLOW_DURATION = 3500; // ms
+export const POWERUP_DOUBLE_DURATION = 5000; // ms
