@@ -43,8 +43,16 @@ export class GameOverScene extends Phaser.Scene {
     /* ---- Top accent line ---- */
     this.add.rectangle(W / 2, 0, W, 3, 0xff2060, 1);
 
-    /* ---- GAME OVER header ---- */
-    this._glowText(W / 2, 52, 'GAME OVER', '34px', '#ff2060', '#ff2060');
+    /* ---- GAME OVER header — Orbitron hollow outline, same as title ---- */
+    this.add.text(W / 2, 52, 'GAME OVER', {
+      fontSize: '34px',
+      fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold',
+      color: '#050510',
+      stroke: '#ff2060',
+      strokeThickness: 2,
+      shadow: { color: '#ff2060', blur: 12, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
+    }).setOrigin(0.5);
 
     /* ---- Player dot ---- */
     this.add.circle(W / 2, 102, 11, skin.color, 1);
