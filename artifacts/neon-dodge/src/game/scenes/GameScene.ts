@@ -105,6 +105,49 @@ export class GameScene extends Phaser.Scene {
   private levelDef!: LevelDef;
   private levelTxt!: Phaser.GameObjects.Text;
   private levelBannerContainer!: Phaser.GameObjects.Container;
+  private levelProgressBg!: Phaser.GameObjects.Rectangle;
+  private levelProgressFill!: Phaser.GameObjects.Rectangle;
+  private levelProgressColor = 0xff2060;
+
+  /* ── Smooth interpolation between levels ──────────────
+     Instead of hard jumps at level boundaries, ALL numeric
+     parameters (speed, gap, spawnMs, playerSpeedMult) are
+     linearly interpolated frame-by-frame between the current
+     level definition and the NEXT one, using a smoothstep
+     easing curve.  This eliminates every sudden difficulty jump.
+  ─────────────────────────────────────────────────────── */
+
+  /** Raw linear progress within current level [0..1] */
+  private get _lvlRawT(): number {
+    const t = (this.elapsedTime - this.currentLevel * LEVEL_DURATION) / LEVEL_DURATION;
+    return Math.max(0, Math.min(1, t));
+  }
+
+  /** Smoothstepped progress — change is fastest at mid-level, gentle at edges */
+  private get _lvlEasedT(): number {
+    const t = this._lvlRawT;
+    return t * t * (3 - 2 * t);
+  }
+
+  /** Lerp any numeric LevelDef field between current and next level */
+  private _lerpNum(key: 'scrollSpeed' | 'spawnMs' | 'gapMin' | 'gapMax' | 'playerSpeedMult'): number {
+    const next = Math.min(this.currentLevel + 1, LEVELS.length - 1);
+    const a = LEVELS[this.currentLevel][key] as number;
+    const b = LEVELS[next][key] as number;
+    return a + (b - a) * this._lvlEasedT;
+  }
+
+  /** Lerp wall colour component-wise */
+  private _lerpWallColor(): number {
+    const next = Math.min(this.currentLevel + 1, LEVELS.length - 1);
+    const c1 = LEVELS[this.currentLevel].wallColor;
+    const c2 = LEVELS[next].wallColor;
+    const t = this._lvlEasedT;
+    const r = Math.round(((c1 >> 16) & 0xff) + (((c2 >> 16) & 0xff) - ((c1 >> 16) & 0xff)) * t);
+    const g = Math.round(((c1 >> 8) & 0xff) + (((c2 >> 8) & 0xff) - ((c1 >> 8) & 0xff)) * t);
+    const b = Math.round((c1 & 0xff) + ((c2 & 0xff) - (c1 & 0xff)) * t);
+    return (r << 16) | (g << 8) | b;
+  }
 
   /* State */
   private alive = true;
@@ -162,8 +205,12 @@ export class GameScene extends Phaser.Scene {
       fontSize: '13px', fontFamily: 'monospace', color: '#ff2060',
     }).setOrigin(0, 0).setDepth(20);
 
+    /* HUD — level progress bar (thin bar under level text) */
+    this.levelProgressBg = this.add.rectangle(12, 30, 56, 3, 0x112233, 1).setOrigin(0, 0).setDepth(20);
+    this.levelProgressFill = this.add.rectangle(12, 30, 2, 3, 0xff2060, 1).setOrigin(0, 0).setDepth(21);
+
     /* HUD — combo (top left, below level) */
-    this.comboHUD = this.add.text(12, 32, '', {
+    this.comboHUD = this.add.text(12, 36, '', {
       fontSize: '12px', fontFamily: 'monospace', color: '#ffcc00',
     }).setOrigin(0, 0).setDepth(20);
 
@@ -203,7 +250,7 @@ export class GameScene extends Phaser.Scene {
     this.dirX = 1;
     this.currentLevel = 0;
     this.levelDef = LEVELS[0];
-    this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult;
+    this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult');
     this.combo = 0;
     this.maxCombo = 0;
     this.comboMultiplier = 1;
@@ -231,7 +278,7 @@ export class GameScene extends Phaser.Scene {
     this.lastTapTime = now;
 
     this.dirX *= -1;
-    this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult * this.dirX;
+    this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     playTap();
 
     this.tweens.add({
@@ -262,6 +309,15 @@ export class GameScene extends Phaser.Scene {
       this._onLevelUp();
     }
 
+    /* ------- Level progress bar (reflects raw time in level) ------- */
+    const barW = Math.max(2, 56 * this._lvlRawT);
+    this.levelProgressFill.setDisplaySize(barW, 3);
+    const barColor = this._lerpWallColor();
+    this.levelProgressColor = barColor;
+    this.levelProgressFill.setFillStyle(barColor, 1);
+    /* Also update level text colour to match current obstacle color */
+    this.levelTxt.setStyle({ color: '#' + barColor.toString(16).padStart(6, '0') });
+
     /* ------- Score (points per second × multipliers) ------- */
     const rawSec = Math.floor(this.elapsedTime);
     const newScore = rawSec * this.comboMultiplier * (now < this.doubleUntil ? 2 : 1);
@@ -276,7 +332,7 @@ export class GameScene extends Phaser.Scene {
     const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 2, GAME_WIDTH - PLAYER_SIZE - 2);
     if (px !== clamped) {
       this.dirX *= -1;
-      this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult * this.dirX;
+      this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     }
     this.player.x = clamped;
     this.playerGlow.x = clamped;
@@ -289,9 +345,9 @@ export class GameScene extends Phaser.Scene {
     /* ------- Scrolling stars ------- */
     this._updateScrollingStars(dt);
 
-    /* ------- Spawn obstacles ------- */
+    /* ------- Spawn obstacles (rate smoothly interpolated) ------- */
     this.spawnTimer += delta;
-    if (this.spawnTimer >= this.levelDef.spawnMs) {
+    if (this.spawnTimer >= this._lerpNum('spawnMs')) {
       this.spawnTimer = 0;
       this._spawnObstacle(time);
     }
@@ -343,35 +399,62 @@ export class GameScene extends Phaser.Scene {
 
     const W = GAME_WIDTH;
     const def = this.levelDef;
-    const hexColor = '#' + def.wallColor.toString(16).padStart(6, '0');
+    const col = def.wallColor;
+    const hex = '#' + col.toString(16).padStart(6, '0');
+    const isZoneEntry = !!def.zone;
+    const bannerH = isZoneEntry ? 76 : 58;
 
     this.levelBannerContainer.removeAll(true);
     this.levelBannerContainer.setAlpha(0);
-    this.levelBannerContainer.setPosition(W / 2, GAME_HEIGHT * 0.42);
+    this.levelBannerContainer.setPosition(W / 2, GAME_HEIGHT * 0.40);
 
-    const pill = this.add.rectangle(0, 0, 260, 60, 0x000000, 0.78);
-    pill.setStrokeStyle(2, def.wallColor, 1);
+    const pill = this.add.rectangle(0, 0, 280, bannerH, 0x000000, 0.82);
+    pill.setStrokeStyle(isZoneEntry ? 3 : 2, col, 1);
     this.levelBannerContainer.add(pill);
 
-    const txt = this.add.text(0, -12, def.label, {
-      fontSize: '26px', fontFamily: 'monospace',
-      color: hexColor, stroke: hexColor, strokeThickness: 1,
-    }).setOrigin(0.5);
-    this.levelBannerContainer.add(txt);
+    if (isZoneEntry) {
+      /* Zone banner: zone name above, level label below */
+      const zoneTxt = this.add.text(0, -18, `◆  ${def.zone}  ◆`, {
+        fontSize: '13px', fontFamily: 'monospace',
+        color: hex, stroke: hex, strokeThickness: 1,
+        letterSpacing: 4,
+      }).setOrigin(0.5);
+      this.levelBannerContainer.add(zoneTxt);
 
-    const sub = this.add.text(0, 16, `SPEED ×${def.playerSpeedMult.toFixed(2)}`, {
-      fontSize: '11px', fontFamily: 'monospace', color: '#667788',
-    }).setOrigin(0.5);
-    this.levelBannerContainer.add(sub);
+      const lvlTxt = this.add.text(0, 6, def.label, {
+        fontSize: '24px', fontFamily: 'monospace',
+        color: hex, stroke: hex, strokeThickness: 1,
+      }).setOrigin(0.5);
+      this.levelBannerContainer.add(lvlTxt);
 
-    /* Zoom-in + fade */
-    this.levelBannerContainer.setScale(0.6);
+      const subTxt = this.add.text(0, 30, `NEW ZONE UNLOCKED`, {
+        fontSize: '10px', fontFamily: 'monospace', color: '#445566', letterSpacing: 2,
+      }).setOrigin(0.5);
+      this.levelBannerContainer.add(subTxt);
+    } else {
+      /* Regular level banner */
+      const lvlTxt = this.add.text(0, -10, def.label, {
+        fontSize: '26px', fontFamily: 'monospace',
+        color: hex, stroke: hex, strokeThickness: 1,
+      }).setOrigin(0.5);
+      this.levelBannerContainer.add(lvlTxt);
+
+      const speed = Math.round(this._lerpNum('scrollSpeed'));
+      const subTxt = this.add.text(0, 16, `↓ ${speed} px/s`, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#445566',
+      }).setOrigin(0.5);
+      this.levelBannerContainer.add(subTxt);
+    }
+
+    /* Zoom-in → hold → fade */
+    this.levelBannerContainer.setScale(0.55);
+    const holdMs = isZoneEntry ? 1400 : 900;
     this.tweens.add({
       targets: this.levelBannerContainer,
       alpha: 1, scaleX: 1, scaleY: 1,
       duration: 220, ease: 'Back.Out',
       onComplete: () => {
-        this.time.delayedCall(900, () => {
+        this.time.delayedCall(holdMs, () => {
           this.tweens.add({
             targets: this.levelBannerContainer,
             alpha: 0, scaleX: 1.1, scaleY: 1.1,
@@ -383,10 +466,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private _updateLevelLabel() {
-    const def = this.levelDef;
-    const hexColor = '#' + def.wallColor.toString(16).padStart(6, '0');
+    /* Level text colour is driven by _lerpWallColor() in update(),
+       so we only update the text string here. */
     this.levelTxt.setText(`LVL ${this.currentLevel + 1}`);
-    this.levelTxt.setStyle({ color: hexColor });
   }
 
   /* --------------------------------------------------------
@@ -418,17 +500,20 @@ export class GameScene extends Phaser.Scene {
       );
       playLaserWarn();
     } else {
-      const gapSize = Phaser.Math.Between(def.gapMin, def.gapMax);
+      const gMin = Math.round(this._lerpNum('gapMin'));
+      const gMax = Math.round(this._lerpNum('gapMax'));
+      const gapSize = Phaser.Math.Between(gMin, gMax);
       const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
+      const wc = this._lerpWallColor();
 
       const leftW = gapX;
-      const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, def.wallColor, 1);
-      left.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
+      const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1);
+      left.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(wc).lighten(20).color, 0.5);
 
       const rightW = W - gapX - gapSize;
       const rightX = gapX + gapSize + rightW / 2;
-      const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, def.wallColor, 1);
-      right.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
+      const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1);
+      right.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(wc).lighten(20).color, 0.5);
 
       this.obstacles.push(
         { body: left,  isLaser: false, waveId },
@@ -498,7 +583,7 @@ export class GameScene extends Phaser.Scene {
      POWER-UP UPDATE
   -------------------------------------------------------- */
   private _updatePowerUps(dt: number) {
-    const speed = this.levelDef.scrollSpeed * 0.55;
+    const speed = this._lerpNum('scrollSpeed') * 0.55;
     const toRemove: number[] = [];
 
     for (let i = this.powerUps.length - 1; i >= 0; i--) {
@@ -592,7 +677,7 @@ export class GameScene extends Phaser.Scene {
      OBSTACLE UPDATE — near-miss + combo tracking
   -------------------------------------------------------- */
   private _updateObstacles(dt: number, time: number) {
-    const rawSpeed = this.levelDef.scrollSpeed;
+    const rawSpeed = this._lerpNum('scrollSpeed');
     const speed = rawSpeed * (this.time.now < this.slowUntil ? 0.38 : 1);
     const toRemove: number[] = [];
 
@@ -863,8 +948,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private _updateScrollingStars(dt: number) {
-    /* Stars speed up with level: level 0 → 1×, level 9 → 3× */
-    const speedMult = 1 + this.currentLevel * 0.22;
+    /* Stars mirror obstacle speed: 130 px/s → 1×,  508 px/s → 3× */
+    const t = (this._lerpNum('scrollSpeed') - 130) / (508 - 130);
+    const speedMult = 1 + t * 2.0;
     for (let i = 0; i < this.stars.length; i++) {
       this.stars[i].y += this.starSpeeds[i] * speedMult * dt;
       if (this.stars[i].y > GAME_HEIGHT + 4) {
