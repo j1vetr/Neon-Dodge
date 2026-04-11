@@ -746,7 +746,7 @@ export class GameScene extends Phaser.Scene {
     /* Panel container centred */
     this.pausePanel = this.add.container(W / 2, H / 2).setDepth(80).setVisible(false);
 
-    const PW = 230, PH = 220;
+    const PW = 230, PH = 240;
 
     /* Panel background */
     const bg = this.add.rectangle(0, 0, PW, PH, 0x080820, 1);
@@ -754,7 +754,7 @@ export class GameScene extends Phaser.Scene {
     border.setFillStyle(0x000000, 0); // transparent fill
 
     /* Title */
-    const title = this.add.text(0, -PH / 2 + 28, 'PAUSED', {
+    const title = this.add.text(0, -PH / 2 + 26, 'PAUSED', {
       fontSize: '22px', fontFamily: 'monospace',
       color: '#050510', stroke: '#00ffff', strokeThickness: 2,
     }).setOrigin(0.5);
@@ -775,13 +775,13 @@ export class GameScene extends Phaser.Scene {
       return { btnBg, btnBorder, btnTxt };
     };
 
-    /* Resume button */
-    const resume = makeBtn(-55, '▶  RESUME', 0x00ffcc, '#00ffcc');
+    /* Resume button — extra gap below title */
+    const resume = makeBtn(-38, '▶  RESUME', 0x00ffcc, '#00ffcc');
     resume.btnBg.on('pointerdown', () => this._togglePause());
 
     /* Sound toggle button */
     const soundLabel = isSoundEnabled() ? '🔊  SOUND ON' : '🔇  SOUND OFF';
-    const sound = makeBtn(0, soundLabel, 0x4488ff, '#4488ff');
+    const sound = makeBtn(16, soundLabel, 0x4488ff, '#4488ff');
     this.soundToggleLabel = sound.btnTxt;
     sound.btnBg.on('pointerdown', () => {
       const next = !isSoundEnabled();
@@ -791,7 +791,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     /* Main menu button */
-    const menu = makeBtn(55, '⟵  MAIN MENU', 0xff4477, '#ff4477');
+    const menu = makeBtn(70, '⟵  MAIN MENU', 0xff4477, '#ff4477');
     menu.btnBg.on('pointerdown', () => {
       stopAmbient();
       this.scene.start('StartScene', { skin: this.skinIndex });
