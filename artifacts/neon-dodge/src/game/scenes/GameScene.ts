@@ -51,7 +51,7 @@ interface TrailParticle {
 
 export class GameScene extends Phaser.Scene {
   /* Player */
-  private player!: Phaser.GameObjects.Arc;
+  private player!: Phaser.GameObjects.Container;
   private playerGlow!: Phaser.GameObjects.Arc;
   private playerColor!: number;
   private dirX = 1;
@@ -171,7 +171,6 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
     this._createScrollingStars();
     this._createGrid();
-    this._drawSideWalls();
 
     /* Shield glow (behind player, hidden until active) */
     this.shieldGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 18, COLOR_SHIELD, 0);
@@ -184,8 +183,8 @@ export class GameScene extends Phaser.Scene {
     this.playerGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 10, this.playerColor, 0.12);
     this.playerGlow.setDepth(9);
 
-    /* Player */
-    this.player = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE, this.playerColor, 1);
+    /* Player — rocket ship */
+    this.player = this._buildRocket(PLAYER_START_X, PLAYER_START_Y, this.playerColor);
     this.player.setDepth(10);
 
     /* HUD — score (center top) */
@@ -281,10 +280,16 @@ export class GameScene extends Phaser.Scene {
     this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     playTap();
 
+    /* Squeeze + direction tilt on tap */
     this.tweens.add({
       targets: this.player,
-      scaleX: 1.35, scaleY: 1.35,
-      duration: 70, yoyo: true,
+      scaleX: 1.25, scaleY: 0.85,
+      duration: 65, yoyo: true,
+    });
+    this.tweens.add({
+      targets: this.player,
+      rotation: this.dirX * 0.18,
+      duration: 120, ease: 'Sine.easeOut',
     });
   }
 
@@ -508,12 +513,10 @@ export class GameScene extends Phaser.Scene {
 
       const leftW = gapX;
       const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1);
-      left.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(wc).lighten(20).color, 0.5);
 
       const rightW = W - gapX - gapSize;
       const rightX = gapX + gapSize + rightW / 2;
       const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1);
-      right.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(wc).lighten(20).color, 0.5);
 
       this.obstacles.push(
         { body: left,  isLaser: false, waveId },
@@ -683,7 +686,6 @@ export class GameScene extends Phaser.Scene {
 
     /* Compute current lerped colour once — applied to every bar this frame */
     const liveColor = this._lerpWallColor();
-    const liveStroke = Phaser.Display.Color.IntegerToColor(liveColor).lighten(20).color;
 
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
@@ -700,7 +702,6 @@ export class GameScene extends Phaser.Scene {
       } else {
         /* Non-laser bars: update colour live every frame */
         obs.body.setFillStyle(liveColor, 1);
-        obs.body.setStrokeStyle(1, liveStroke, 0.5);
       }
 
       /* Near-miss + combo: first time obstacle row crosses PLAYER_START_Y */
@@ -913,12 +914,15 @@ export class GameScene extends Phaser.Scene {
      TRAIL PARTICLES
   -------------------------------------------------------- */
   private _emitTrail(time: number) {
+    /* Emit from the nozzle area (bottom of rocket, +13 px below centre) */
+    const flameColors = [this.playerColor, 0xffffff, 0xff8800, 0xffff00];
+    const col = flameColors[Math.floor(Math.random() * flameColors.length)];
     const dot = this.add.circle(
-      this.player.x + Phaser.Math.Between(-4, 4),
-      this.player.y + Phaser.Math.Between(4, 10),
-      Phaser.Math.Between(2, 5),
-      this.playerColor,
-      0.7,
+      this.player.x + Phaser.Math.Between(-3, 3),
+      this.player.y + 13 + Phaser.Math.Between(0, 6),
+      Phaser.Math.Between(2, 4),
+      col,
+      0.75,
     );
     dot.setDepth(8);
     this.trailParticles.push({ circle: dot, born: time, lifetime: TRAIL_PARTICLE_LIFETIME });
@@ -975,10 +979,56 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y <= GAME_HEIGHT; y += 40) g.lineBetween(0, y, GAME_WIDTH, y);
   }
 
-  private _drawSideWalls() {
+  /* --------------------------------------------------------
+     ROCKET PLAYER BUILDER
+     Draws a neon space-rocket pointing upward.
+     The container's (0,0) is the centre / collision point.
+
+     Dimensions (relative to centre):
+       Nose tip  :  y = -18
+       Body      :  x ±6,   y -8 → +8
+       Fins      :  x ±6→±14, y +2 → +10
+       Nozzle    :  x ±4,   y +8 → +13
+
+     Total height ≈ 31 px, width with fins ≈ 28 px.
+     Hitbox radius (PLAYER_SIZE = 13) stays unchanged.
+  -------------------------------------------------------- */
+  private _buildRocket(x: number, y: number, color: number): Phaser.GameObjects.Container {
     const g = this.add.graphics();
-    g.fillStyle(0xff2060, 0.6);
-    g.fillRect(0, 0, 2, GAME_HEIGHT);
-    g.fillRect(GAME_WIDTH - 2, 0, 2, GAME_HEIGHT);
+    const col = color;
+    const dark = Phaser.Display.Color.IntegerToColor(col).darken(30).color;
+    const light = Phaser.Display.Color.IntegerToColor(col).lighten(40).color;
+
+    /* ── Nose cone ── */
+    g.fillStyle(light, 1);
+    g.fillTriangle(-7, -8, 7, -8, 0, -20);
+
+    /* ── Body ── */
+    g.fillStyle(col, 1);
+    g.fillRect(-6, -8, 12, 18);
+
+    /* ── Cockpit window ── */
+    g.fillStyle(0x000000, 0.6);
+    g.fillCircle(0, -3, 4);
+    g.fillStyle(0x88eeff, 0.9);
+    g.fillCircle(0, -3, 2.5);
+
+    /* ── Left fin ── */
+    g.fillStyle(dark, 1);
+    g.fillTriangle(-6, 2, -14, 10, -6, 10);
+
+    /* ── Right fin ── */
+    g.fillTriangle(6, 2, 14, 10, 6, 10);
+
+    /* ── Nozzle ── */
+    g.fillStyle(0x222244, 1);
+    g.fillRect(-5, 10, 10, 4);
+
+    /* ── Neon outline glow (thin stroke around body) ── */
+    g.lineStyle(1, col, 0.7);
+    g.strokeRect(-6, -8, 12, 18);
+
+    const container = this.add.container(x, y, [g]);
+    return container;
   }
 }
