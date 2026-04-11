@@ -82,6 +82,9 @@ export class LangScene extends Phaser.Scene {
       .setDisplaySize(SIZE, SIZE)
       .setInteractive({ useHandCursor: true });
 
+    /* Save base scale AFTER setDisplaySize so hover is relative */
+    const baseScale = flag.scaleX;
+
     /* Language label */
     const lbl = this.add.text(x, y + SIZE / 2 - 4, label, {
       fontSize: '11px', fontFamily: 'monospace', color: '#445566',
@@ -89,13 +92,13 @@ export class LangScene extends Phaser.Scene {
 
     /* Hover states */
     flag.on('pointerover', () => {
-      flag.setScale(1.08);
+      flag.setScale(baseScale * 1.08);
       highlight.setStrokeStyle(1, 0x00ffff, 0.4);
       highlight.setFillStyle(0x00ffff, 0.05);
       lbl.setColor('#00ffff');
     });
     flag.on('pointerout', () => {
-      flag.setScale(1);
+      flag.setScale(baseScale);
       highlight.setStrokeStyle(1, 0x00ffff, 0);
       highlight.setFillStyle(0x000000, 0);
       lbl.setColor('#445566');
@@ -104,7 +107,7 @@ export class LangScene extends Phaser.Scene {
     /* Click — scale flash then start */
     flag.on('pointerdown', () => {
       this.tweens.add({
-        targets: flag, scaleX: 0.92, scaleY: 0.92,
+        targets: flag, scaleX: baseScale * 0.92, scaleY: baseScale * 0.92,
         duration: 70, yoyo: true,
         onComplete: () => cb(),
       });
