@@ -175,51 +175,56 @@ export class StartScene extends Phaser.Scene {
     const SCRAMBLE = '!@#&%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const floatAll: Phaser.GameObjects.GameObject[] = [dg];
 
+    /* ── spawnChar: ONE object per letter, outline-only style ─────────
+       Fill = game background color  →  interior appears hollow/dark
+       Stroke = neon color            →  outline glows like a neon tube
+       Zero glow-box layers: no overlapping objects, no rectangles.
+    ─────────────────────────────────────────────────────────────────── */
+    const BG = '#050510'; // same as COLOR_BG hex
+
     const spawnChar = (
       ch: string, x: number, y: number,
-      mainColor: string, glowColor: string,
-      mainPx: number, startDelay: number,
+      outlineColor: string,
+      mainPx: number, strokeW: number,
+      startDelay: number,
     ): Phaser.GameObjects.Text => {
-      /* Three fill-only layers — NO stroke → zero rectangular bleed */
-      const lg = this.add.text(x, y, ch, {
-        fontSize: `${mainPx + 10}px`, fontFamily: 'monospace', fontStyle: 'bold',
-        color: glowColor,
-      }).setOrigin(0.5).setAlpha(0);
-
-      const lm = this.add.text(x, y, ch, {
-        fontSize: `${mainPx + 4}px`, fontFamily: 'monospace', fontStyle: 'bold',
-        color: glowColor,
-      }).setOrigin(0.5).setAlpha(0);
-
+      /* Single crisp text — hollow neon-tube effect */
       const lc = this.add.text(x, y, ch, {
-        fontSize: `${mainPx}px`, fontFamily: 'monospace', fontStyle: 'bold',
-        color: mainColor,
-        shadow: { color: glowColor, blur: 16, fill: true, offsetX: 0, offsetY: 0 },
+        fontSize: `${mainPx}px`,
+        fontFamily: '"Orbitron", monospace',
+        fontStyle: 'bold',
+        color: BG,               // interior = dark bg  →  hollow look
+        stroke: outlineColor,    // neon outline
+        strokeThickness: strokeW,
+        shadow: { color: outlineColor, blur: 10, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5).setAlpha(0);
 
-      /* Scramble then lock */
+      /* Matrix scramble → lock on correct char */
       this.time.delayedCall(startDelay, () => {
-        lg.setAlpha(0.08); lm.setAlpha(0.18); lc.setAlpha(1.0);
+        lc.setAlpha(1.0);
         let t = 0;
-        const reps = 6 + Math.floor(Math.random() * 5);
+        const reps = 5 + Math.floor(Math.random() * 4);
         const ev = this.time.addEvent({
-          delay: 52, repeat: reps,
+          delay: 55, repeat: reps,
           callback: () => {
-            const rc = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
-            lg.setText(rc); lm.setText(rc); lc.setText(rc);
+            lc.setText(SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)]);
             if (++t >= reps) {
-              lg.setText(ch); lm.setText(ch); lc.setText(ch);
-              /* ping flash */
-              this.tweens.add({ targets: lc, alpha: { from: 1, to: 0.7 }, duration: 100, yoyo: true });
+              lc.setText(ch);
+              /* ping: momentary brightness spike then settle */
               this.tweens.add({
-                targets: lg, alpha: { from: 0.22, to: 0.07 }, duration: 250,
-                onComplete: () => this.tweens.add({
-                  targets: lg,
-                  alpha: { from: 0.07, to: 0.2 },
-                  duration: 1300 + Math.random() * 500,
-                  yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-                  delay: Math.random() * 500,
-                }),
+                targets: lc,
+                alpha: { from: 1.0, to: 0.55 },
+                duration: 90, yoyo: true,
+                onComplete: () => {
+                  /* subtle breathing pulse after reveal */
+                  this.tweens.add({
+                    targets: lc,
+                    alpha: { from: 1.0, to: 0.78 },
+                    duration: 1200 + Math.random() * 600,
+                    yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                    delay: Math.random() * 800,
+                  });
+                },
               });
               ev.remove();
             }
@@ -227,22 +232,22 @@ export class StartScene extends Phaser.Scene {
         });
       });
 
-      floatAll.push(lg, lm, lc);
+      floatAll.push(lc);
       return lc;
     };
 
-    /* ── NEON letters (28px monospace, spaced) ── */
+    /* ── NEON letters — 24px Orbitron, 2px stroke, cyan outline ── */
     const NEON = ['N', 'E', 'O', 'N'];
-    const nSp = 27, nSt = cx - ((NEON.length - 1) / 2) * nSp;
+    const nSp = 28, nSt = cx - ((NEON.length - 1) / 2) * nSp;
     const neonLetters = NEON.map((ch, i) =>
-      spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', '#00eeff', 28, 40 + i * 80));
+      spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', 24, 1.5, 40 + i * 80));
     this.titleNeon = neonLetters[neonLetters.length - 1];
 
-    /* ── DODGE letters (68px monospace, hero) ── */
+    /* ── DODGE letters — 66px Orbitron, 2px stroke, pink outline ── */
     const DODGE = ['D', 'O', 'D', 'G', 'E'];
-    const dSp = 58, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
+    const dSp = 56, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
     const dodgeLetters = DODGE.map((ch, i) =>
-      spawnChar(ch, dSt + i * dSp, dodgeY, '#ffffff', '#ff22aa', 68, 280 + i * 75));
+      spawnChar(ch, dSt + i * dSp, dodgeY, '#ff22aa', 66, 2, 280 + i * 75));
     this.titleDodge = dodgeLetters[dodgeLetters.length - 1];
 
     /* ── Tagline fades in after all letters resolve ── */
