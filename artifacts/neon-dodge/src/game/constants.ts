@@ -161,7 +161,6 @@ export const COLOR_LASER = 0xffff00;
 export const COLOR_SCORE = 0xffffff;
 export const COLOR_TRAIL = 0x00ffff;
 export const COLOR_SHIELD = 0x00aaff;
-export const COLOR_SLOW  = 0xaa00ff;
 export const COLOR_DOUBLE = 0xffcc00;
 
 /* Skins */
@@ -193,5 +192,4 @@ export const NEAR_MISS_BONUS = 50;
 /* Power-ups */
 export const POWERUP_SIZE = 14;
 export const POWERUP_SPAWN_CHANCE = 0.18;
-export const POWERUP_SLOW_DURATION = 3500;
 export const POWERUP_DOUBLE_DURATION = 5000;

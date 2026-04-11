@@ -14,11 +14,11 @@ import {
   OBSTACLE_THICKNESS,
   TRAIL_PARTICLE_LIFETIME, TRAIL_EMIT_INTERVAL,
   SHAKE_DURATION, SHAKE_INTENSITY,
-  COLOR_BG, COLOR_SHIELD, COLOR_SLOW, COLOR_DOUBLE,
+  COLOR_BG, COLOR_SHIELD, COLOR_DOUBLE,
   SKINS, STORAGE_HIGHSCORE, STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
   COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5,
   NEAR_MISS_DISTANCE, NEAR_MISS_BONUS,
-  POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_SLOW_DURATION, POWERUP_DOUBLE_DURATION,
+  POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_DOUBLE_DURATION,
 } from '../constants';
 import {
   playTap, playHit, playScore,
@@ -39,7 +39,7 @@ interface PowerUp {
   body: Phaser.GameObjects.Rectangle;
   icon: Phaser.GameObjects.Text;
   ring: Phaser.GameObjects.Arc;
-  type: 'shield' | 'slow' | 'double';
+  type: 'shield' | 'double';
   collected: boolean;
 }
 
@@ -71,11 +71,9 @@ export class GameScene extends Phaser.Scene {
 
   /* Power-ups */
   private powerUps: PowerUp[] = [];
-  private slowUntil = 0;
   private doubleUntil = 0;
 
   /* Power-up HUD */
-  private slowTimerTxt!: Phaser.GameObjects.Text;
   private doubleTimerTxt!: Phaser.GameObjects.Text;
   private shieldIcon!: Phaser.GameObjects.Text;
 
@@ -214,12 +212,7 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0, 0).setDepth(20);
 
     /* HUD — power-up timers */
-    this.slowTimerTxt = this.add.text(W / 2, 50, '', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#cc88ff',
-      stroke: '#440088', strokeThickness: 1,
-    }).setOrigin(0.5).setDepth(20);
-
-    this.doubleTimerTxt = this.add.text(W / 2, 64, '', {
+    this.doubleTimerTxt = this.add.text(W / 2, 50, '', {
       fontSize: '11px', fontFamily: 'monospace', color: '#ffcc00',
       stroke: '#885500', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(20);
@@ -258,7 +251,6 @@ export class GameScene extends Phaser.Scene {
     this.passedWaveIds.clear();
     this.shieldActive = false;
     this.invincibleUntil = 0;
-    this.slowUntil = 0;
     this.doubleUntil = 0;
 
     this._updateLevelLabel();
@@ -513,11 +505,11 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _spawnPowerUp() {
     const W = GAME_WIDTH;
-    const types: Array<'shield' | 'slow' | 'double'> = ['shield', 'slow', 'double'];
+    const types: Array<'shield' | 'double'> = ['shield', 'double'];
     const type = types[Math.floor(Math.random() * types.length)];
 
-    const colorMap  = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
-    const labelMap  = { shield: 'SHIELD', slow: 'SLOW', double: '×2 PTS' };
+    const colorMap  = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
+    const labelMap  = { shield: 'SHIELD', double: '×2 PTS' };
     const color = colorMap[type];
     const hexColor = '#' + color.toString(16).padStart(6, '0');
 
@@ -597,7 +589,7 @@ export class GameScene extends Phaser.Scene {
     playPowerUp(pu.type);
 
     /* Flash */
-    const colorMap = { shield: COLOR_SHIELD, slow: COLOR_SLOW, double: COLOR_DOUBLE };
+    const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
     const c = colorMap[pu.type];
     const flash = this.add.circle(pu.body.x, pu.body.y, POWERUP_SIZE * 2.5, c, 0.6).setDepth(15);
     this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 280, onComplete: () => flash.destroy() });
@@ -608,16 +600,12 @@ export class GameScene extends Phaser.Scene {
       this.shieldActive = true;
       this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 1);
       this.shieldGlow.setAlpha(0.2);
-    } else if (pu.type === 'slow') {
-      this.slowUntil = this.time.now + POWERUP_SLOW_DURATION;
     } else if (pu.type === 'double') {
       this.doubleUntil = this.time.now + POWERUP_DOUBLE_DURATION;
     }
 
     this._showPopupText(
-      pu.type === 'shield' ? '🛡 SHIELD!' :
-      pu.type === 'slow'   ? '❄ SLOW!' :
-                             '×2 DOUBLE!',
+      pu.type === 'shield' ? '🛡 SHIELD!' : '×2 DOUBLE!',
       '#' + c.toString(16).padStart(6, '0'),
     );
   }
@@ -659,7 +647,7 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _updateObstacles(dt: number, time: number) {
     const rawSpeed = this._lerpNum('scrollSpeed');
-    const speed = rawSpeed * (this.time.now < this.slowUntil ? 0.38 : 1);
+    const speed = rawSpeed;
     const toRemove: number[] = [];
 
     /* Compute current lerped colour once — applied to every bar this frame */
@@ -763,13 +751,6 @@ export class GameScene extends Phaser.Scene {
      POWER-UP HUD UPDATE
   -------------------------------------------------------- */
   private _updatePowerUpHUD(now: number) {
-    if (now < this.slowUntil) {
-      const secs = ((this.slowUntil - now) / 1000).toFixed(1);
-      this.slowTimerTxt.setText(`❄ SLOW ${secs}s`);
-    } else {
-      this.slowTimerTxt.setText('');
-    }
-
     if (now < this.doubleUntil) {
       const secs = ((this.doubleUntil - now) / 1000).toFixed(1);
       this.doubleTimerTxt.setText(`×2 DOUBLE ${secs}s`);
