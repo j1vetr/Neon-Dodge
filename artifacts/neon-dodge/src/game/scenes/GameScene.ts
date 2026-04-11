@@ -86,10 +86,15 @@ export class GameScene extends Phaser.Scene {
   private starSpeeds: number[] = [];
 
   /* Score / time */
-  private score = 0;
+  private score = 0;            // float accumulator
+  private scoreDisplay = 0;    // last displayed integer (avoids redraws every frame)
   private elapsedTime = 0;
   private scoreTxt!: Phaser.GameObjects.Text;
   private highScore = 0;
+  private lastScoreSoundAt = 0; // for score sound throttle
+
+  /* Power-up cooldown */
+  private lastPowerUpTime = -99999; // ms since game start when last power-up spawned
 
   /* Combo */
   private combo = 0;
@@ -234,8 +239,11 @@ export class GameScene extends Phaser.Scene {
     /* Reset state */
     this.alive = true;
     this.score = 0;
+    this.scoreDisplay = 0;
+    this.lastScoreSoundAt = 0;
     this.elapsedTime = 0;
     this.spawnTimer = 0;
+    this.lastPowerUpTime = -99999;
     this.obstacles = [];
     this.powerUps = [];
     this.trailParticles = [];
@@ -315,13 +323,19 @@ export class GameScene extends Phaser.Scene {
     /* Also update level text colour to match current obstacle color */
     this.levelTxt.setStyle({ color: '#' + barColor.toString(16).padStart(6, '0') });
 
-    /* ------- Score (points per second × multipliers) ------- */
-    const rawSec = Math.floor(this.elapsedTime);
-    const newScore = rawSec * this.comboMultiplier * (now < this.doubleUntil ? 2 : 1);
-    if (newScore > this.score) {
-      this.score = newScore;
-      this.scoreTxt.setText(`${this.score}`);
-      if (rawSec % 5 === 0 && rawSec > 0) playScore(rawSec / 5);
+    /* ------- Score: delta-time accumulation (never freezes, no rewind) ------- */
+    const doubleActive = now < this.doubleUntil;
+    /* Base: 10 pts/s × combo multiplier × 2x multiplier */
+    this.score += (dt / 1000) * 10 * this.comboMultiplier * (doubleActive ? 2 : 1);
+    const displayNow = Math.floor(this.score);
+    if (displayNow !== this.scoreDisplay) {
+      this.scoreDisplay = displayNow;
+      this.scoreTxt.setText(`${displayNow}`);
+      /* Score sound every 50 points */
+      if (displayNow - this.lastScoreSoundAt >= 50) {
+        this.lastScoreSoundAt = displayNow;
+        playScore(1);
+      }
     }
 
     /* ------- Player horizontal movement ------- */
@@ -494,9 +508,15 @@ export class GameScene extends Phaser.Scene {
       { body: right, isLaser: false, waveId },
     );
 
-    /* Maybe spawn a power-up too */
-    if (Math.random() < POWERUP_SPAWN_CHANCE) {
+    /* Maybe spawn a power-up: max 1 on screen, min 8s apart */
+    const sinceLastPowerUp = this.elapsedTime * 1000 - this.lastPowerUpTime;
+    if (
+      this.powerUps.length === 0 &&
+      sinceLastPowerUp >= 8000 &&
+      Math.random() < POWERUP_SPAWN_CHANCE
+    ) {
       this._spawnPowerUp();
+      this.lastPowerUpTime = this.elapsedTime * 1000;
     }
   }
 
@@ -696,7 +716,8 @@ export class GameScene extends Phaser.Scene {
     playNearMiss();
     const bonus = NEAR_MISS_BONUS * (this.time.now < this.doubleUntil ? 2 : 1);
     this.score += bonus;
-    this.scoreTxt.setText(`${this.score}`);
+    this.scoreDisplay = Math.floor(this.score);
+    this.scoreTxt.setText(`${this.scoreDisplay}`);
     this._showPopupText(`+${bonus} CLOSE!`, '#ff8800');
   }
 
@@ -806,9 +827,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(SHAKE_DURATION, SHAKE_INTENSITY);
 
     /* Save high score */
-    if (this.score > this.highScore) {
-      this.highScore = this.score;
-      localStorage.setItem(STORAGE_HIGHSCORE, String(this.highScore));
+    const finalScore = Math.floor(this.score);
+    if (finalScore > this.highScore) {
+      this.highScore = finalScore;
+      localStorage.setItem(STORAGE_HIGHSCORE, String(finalScore));
     }
 
     /* Save stats */
@@ -849,7 +871,7 @@ export class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(900, () => {
       this.scene.start('GameOverScene', {
-        score: this.score,
+        score: Math.floor(this.score),
         best: this.highScore,
         skin: this.skinIndex,
         level: this.currentLevel + 1,
