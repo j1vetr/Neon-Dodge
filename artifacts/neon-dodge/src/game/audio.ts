@@ -5,7 +5,24 @@
    No external assets required.
    ========================================================= */
 
+import { STORAGE_SOUND } from './constants';
+
 let ctx: AudioContext | null = null;
+let soundEnabled = true;
+
+export function initSound() {
+  soundEnabled = localStorage.getItem(STORAGE_SOUND) !== 'off';
+}
+
+export function setSoundEnabled(on: boolean) {
+  soundEnabled = on;
+  localStorage.setItem(STORAGE_SOUND, on ? 'on' : 'off');
+  if (!on) stopAmbient();
+}
+
+export function isSoundEnabled(): boolean {
+  return soundEnabled;
+}
 
 function getCtx(): AudioContext {
   if (!ctx) ctx = new AudioContext();
@@ -30,6 +47,7 @@ function playTone(
   gain = 0.18,
   detune = 0,
 ) {
+  if (!soundEnabled) return;
   resume();
   const c = getCtx();
   const osc = c.createOscillator();
@@ -53,6 +71,7 @@ export function playTap() {
 
 /** Boom + noise burst on collision */
 export function playHit() {
+  if (!soundEnabled) return;
   resume();
   const c = getCtx();
   const bufferSize = c.sampleRate * 0.3;
@@ -87,7 +106,6 @@ export function playLaserWarn() {
 
 /** Combo sound — pitch rises with each combo tier */
 export function playCombo(comboTier: number) {
-  // Tier 1=x2, 2=x3, 3=x4, 4=x5
   const baseFreq = 500 + comboTier * 120;
   playTone(baseFreq, 'sine', 0.1, 0.14);
   playTone(baseFreq * 1.25, 'triangle', 0.08, 0.1);
@@ -96,6 +114,7 @@ export function playCombo(comboTier: number) {
 
 /** Near miss swoosh */
 export function playNearMiss() {
+  if (!soundEnabled) return;
   resume();
   const c = getCtx();
   const osc = c.createOscillator();
@@ -122,9 +141,7 @@ export function playPowerUp(type: 'shield' | 'double') {
 
 /** Shield absorbs a hit */
 export function playShieldHit() {
-  resume();
-  const c = getCtx();
-  // metallic clang
+  if (!soundEnabled) return;
   playTone(300, 'square', 0.12, 0.18);
   playTone(150, 'sawtooth', 0.2, 0.2, -100);
 }
@@ -140,26 +157,26 @@ function scheduleAmbientBeat(intervalMs: number) {
   if (!ambientRunning) return;
   ambientHandle = setTimeout(() => {
     if (!ambientRunning) return;
-    // Very quiet kick drum feel
-    resume();
-    const c = getCtx();
-    const osc = c.createOscillator();
-    const vol = c.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(90, c.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, c.currentTime + 0.1);
-    vol.gain.setValueAtTime(0.07, c.currentTime);
-    vol.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.18);
-    osc.connect(vol);
-    vol.connect(c.destination);
-    osc.start();
-    osc.stop(c.currentTime + 0.18);
+    if (soundEnabled) {
+      resume();
+      const c = getCtx();
+      const osc = c.createOscillator();
+      const vol = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(90, c.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, c.currentTime + 0.1);
+      vol.gain.setValueAtTime(0.07, c.currentTime);
+      vol.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.18);
+      osc.connect(vol);
+      vol.connect(c.destination);
+      osc.start();
+      osc.stop(c.currentTime + 0.18);
+    }
     scheduleAmbientBeat(intervalMs);
   }, intervalMs);
 }
 
 function levelToInterval(level: number): number {
-  // Level 0 → 900ms, Level 9 → 380ms
   return Math.max(380, 900 - level * 58);
 }
 

@@ -193,3 +193,6 @@ export const NEAR_MISS_BONUS = 50;
 export const POWERUP_SIZE = 14;
 export const POWERUP_SPAWN_CHANCE = 0.18;
 export const POWERUP_DOUBLE_DURATION = 5000;
+
+/* Sound */
+export const STORAGE_SOUND = 'neonDodge_sound';

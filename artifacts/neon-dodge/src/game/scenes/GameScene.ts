@@ -24,6 +24,7 @@ import {
   playTap, playHit, playScore,
   playCombo, playNearMiss, playPowerUp, playShieldHit,
   startAmbient, updateAmbientLevel, stopAmbient,
+  initSound, setSoundEnabled, isSoundEnabled,
 } from '../audio';
 
 /* ---- Types ---- */
@@ -95,6 +96,13 @@ export class GameScene extends Phaser.Scene {
 
   /* Power-up cooldown */
   private lastPowerUpTime = -99999; // ms since game start when last power-up spawned
+
+  /* Pause */
+  private paused = false;
+  private pauseOverlay!: Phaser.GameObjects.Rectangle;
+  private pausePanel!: Phaser.GameObjects.Container;
+  private pauseBtn!: Phaser.GameObjects.Text;
+  private soundToggleLabel!: Phaser.GameObjects.Text;
 
   /* Combo */
   private combo = 0;
@@ -170,6 +178,9 @@ export class GameScene extends Phaser.Scene {
   create() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
 
+    /* Load saved sound preference */
+    initSound();
+
     /* Background */
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
     this._createScrollingStars();
@@ -232,12 +243,25 @@ export class GameScene extends Phaser.Scene {
     this.levelBannerContainer.setDepth(30);
     this.levelBannerContainer.setAlpha(0);
 
+    /* Pause button — top-right corner */
+    this.pauseBtn = this.add.text(W - 14, 14, 'II', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#aabbcc',
+    }).setOrigin(1, 0).setDepth(25).setInteractive({ useHandCursor: true });
+    this.pauseBtn.on('pointerover', () => this.pauseBtn.setColor('#ffffff'));
+    this.pauseBtn.on('pointerout', () => this.pauseBtn.setColor('#aabbcc'));
+    this.pauseBtn.on('pointerdown', () => this._togglePause());
+
+    /* Build pause panel (hidden by default) */
+    this._buildPausePanel();
+
     /* Input */
-    this.input.on('pointerdown', this._onTap, this);
+    this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => this._onPointerDown(ptr), this);
     this.input.keyboard?.on('keydown-SPACE', this._onTap, this);
+    this.input.keyboard?.on('keydown-ESC', () => this._togglePause(), this);
 
     /* Reset state */
     this.alive = true;
+    this.paused = false;
     this.score = 0;
     this.scoreDisplay = 0;
     this.lastScoreSoundAt = 0;
@@ -270,8 +294,14 @@ export class GameScene extends Phaser.Scene {
   /* --------------------------------------------------------
      TAP HANDLER
   -------------------------------------------------------- */
+  private _onPointerDown(ptr: Phaser.Input.Pointer) {
+    /* Skip direction change if a UI interactive object was tapped */
+    if (this.input.hitTestPointer(ptr).length > 0) return;
+    this._onTap();
+  }
+
   private _onTap() {
-    if (!this.alive) return;
+    if (!this.alive || this.paused) return;
     const now = this.time.now;
     if (now - this.lastTapTime < 80) return;
     this.lastTapTime = now;
@@ -297,7 +327,7 @@ export class GameScene extends Phaser.Scene {
      MAIN UPDATE
   -------------------------------------------------------- */
   update(time: number, delta: number) {
-    if (!this.alive) return;
+    if (!this.alive || this.paused) return;
 
     const dt = delta / 1000;
     this.elapsedTime += dt;
@@ -707,6 +737,98 @@ export class GameScene extends Phaser.Scene {
       }
     }
     toRemove.forEach(i => this.obstacles.splice(i, 1));
+  }
+
+  /* --------------------------------------------------------
+     PAUSE PANEL
+  -------------------------------------------------------- */
+  private _buildPausePanel() {
+    const W = GAME_WIDTH, H = GAME_HEIGHT;
+
+    /* Full-screen dimmer */
+    this.pauseOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.72)
+      .setDepth(79).setVisible(false);
+
+    /* Panel container centred */
+    this.pausePanel = this.add.container(W / 2, H / 2).setDepth(80).setVisible(false);
+
+    const PW = 230, PH = 220;
+
+    /* Panel background */
+    const bg = this.add.rectangle(0, 0, PW, PH, 0x080820, 1);
+    const border = this.add.rectangle(0, 0, PW, PH).setStrokeStyle(1.5, 0x00ffff, 0.7);
+    border.setFillStyle(0x000000, 0); // transparent fill
+
+    /* Title */
+    const title = this.add.text(0, -PH / 2 + 28, 'PAUSED', {
+      fontSize: '22px', fontFamily: 'monospace',
+      color: '#050510', stroke: '#00ffff', strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    /* Helper: neon button */
+    const makeBtn = (y: number, label: string, color: number, textColor: string) => {
+      const BW = 170, BH = 36;
+      const btnBg = this.add.rectangle(0, y, BW, BH, color, 0.15);
+      const btnBorder = this.add.rectangle(0, y, BW, BH).setStrokeStyle(1, color, 0.8);
+      btnBorder.setFillStyle(0x000000, 0);
+      const btnTxt = this.add.text(0, y, label, {
+        fontSize: '13px', fontFamily: 'monospace', color: textColor,
+      }).setOrigin(0.5);
+      /* Hit area on the text but make it larger via bg */
+      btnBg.setInteractive({ useHandCursor: true });
+      btnBg.on('pointerover', () => btnBg.setAlpha(0.35));
+      btnBg.on('pointerout',  () => btnBg.setAlpha(0.15));
+      return { btnBg, btnBorder, btnTxt };
+    };
+
+    /* Resume button */
+    const resume = makeBtn(-55, '▶  RESUME', 0x00ffcc, '#00ffcc');
+    resume.btnBg.on('pointerdown', () => this._togglePause());
+
+    /* Sound toggle button */
+    const soundLabel = isSoundEnabled() ? '🔊  SOUND ON' : '🔇  SOUND OFF';
+    const sound = makeBtn(0, soundLabel, 0x4488ff, '#4488ff');
+    this.soundToggleLabel = sound.btnTxt;
+    sound.btnBg.on('pointerdown', () => {
+      const next = !isSoundEnabled();
+      setSoundEnabled(next);
+      this.soundToggleLabel.setText(next ? '🔊  SOUND ON' : '🔇  SOUND OFF');
+      if (next) startAmbient(this.currentLevel);
+    });
+
+    /* Main menu button */
+    const menu = makeBtn(55, '⟵  MAIN MENU', 0xff4477, '#ff4477');
+    menu.btnBg.on('pointerdown', () => {
+      stopAmbient();
+      this.scene.start('StartScene', { skin: this.skinIndex });
+    });
+
+    this.pausePanel.add([
+      bg, border, title,
+      resume.btnBg, resume.btnBorder, resume.btnTxt,
+      sound.btnBg, sound.btnBorder, sound.btnTxt,
+      menu.btnBg, menu.btnBorder, menu.btnTxt,
+    ]);
+  }
+
+  private _togglePause() {
+    if (!this.alive) return;
+    this.paused = !this.paused;
+
+    if (this.paused) {
+      stopAmbient();
+      /* Update sound label in case changed outside */
+      this.soundToggleLabel.setText(isSoundEnabled() ? '🔊  SOUND ON' : '🔇  SOUND OFF');
+      this.pauseOverlay.setVisible(true);
+      this.pausePanel.setVisible(true);
+      /* Dim the pause button while paused */
+      this.pauseBtn.setColor('#555566');
+    } else {
+      this.pauseOverlay.setVisible(false);
+      this.pausePanel.setVisible(false);
+      this.pauseBtn.setColor('#aabbcc');
+      if (isSoundEnabled()) startAmbient(this.currentLevel);
+    }
   }
 
   /* --------------------------------------------------------
