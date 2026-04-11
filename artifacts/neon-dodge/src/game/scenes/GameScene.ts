@@ -53,7 +53,6 @@ interface TrailParticle {
 export class GameScene extends Phaser.Scene {
   /* Player */
   private player!: Phaser.GameObjects.Container;
-  private playerGlow!: Phaser.GameObjects.Arc;
   private playerColor!: number;
   private dirX = 1;
   private playerVX = 0;
@@ -192,10 +191,6 @@ export class GameScene extends Phaser.Scene {
     this.shieldRing = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 12, COLOR_SHIELD, 0);
     this.shieldRing.setDepth(9);
     this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, 0);
-
-    /* Player glow ring (behind player) */
-    this.playerGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 10, this.playerColor, 0.12);
-    this.playerGlow.setDepth(9);
 
     /* Player — rocket ship */
     this.player = this._buildRocket(PLAYER_START_X, PLAYER_START_Y, this.playerColor);
@@ -376,8 +371,6 @@ export class GameScene extends Phaser.Scene {
       this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     }
     this.player.x = clamped;
-    this.playerGlow.x = clamped;
-    this.playerGlow.y = this.player.y;
     this.shieldRing.x = clamped;
     this.shieldRing.y = this.player.y;
     this.shieldGlow.x = clamped;
@@ -416,8 +409,6 @@ export class GameScene extends Phaser.Scene {
     }
     this._updateTrail(time);
 
-    /* ------- Glow pulse ------- */
-    this.playerGlow.setRadius(PLAYER_SIZE + 8 + Math.sin(time * 0.005) * 4);
     if (this.shieldActive) {
       const pulse = 0.25 + 0.15 * Math.sin(time * 0.012);
       this.shieldRing.setStrokeStyle(3, COLOR_SHIELD, pulse + 0.5);
