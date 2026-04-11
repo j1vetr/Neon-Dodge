@@ -26,7 +26,10 @@ function _diamond(
    ========================================================= */
 export class StartScene extends Phaser.Scene {
   private selectedSkin = 0;
-  private floatingPlayer!: Phaser.GameObjects.Arc;
+  private floatingPlayer!: Phaser.GameObjects.Container;
+  private floatingPlayerGfx!: Phaser.GameObjects.Graphics;
+  private floatingPlayerCX = 0;
+  private floatingPlayerCY = 0;
   private playerTrail: Phaser.GameObjects.Arc[] = [];
   private playerTrailTimer = 0;
   private skinDots: Phaser.GameObjects.Arc[] = [];
@@ -74,10 +77,13 @@ export class StartScene extends Phaser.Scene {
     if (this.playerTrailTimer > 55) {
       this.playerTrailTimer = 0;
       const skin = SKINS[this.selectedSkin];
+      /* Emit flame from rocket nozzle (nozzle bottom is +18px from container centre) */
+      const flameColors = [skin.color, 0xffffff, 0xff8800, 0xffff00];
+      const fCol = flameColors[Math.floor(Math.random() * flameColors.length)];
       const dot = this.add.circle(
-        this.floatingPlayer.x + Phaser.Math.Between(-4, 4),
-        this.floatingPlayer.y + Phaser.Math.Between(-4, 4),
-        Phaser.Math.Between(2, 5), skin.color, 0.5,
+        this.floatingPlayer.x + Phaser.Math.Between(-3, 3),
+        this.floatingPlayer.y + 18 + Phaser.Math.Between(0, 5),
+        Phaser.Math.Between(2, 4), fCol, 0.7,
       );
       this.playerTrail.push(dot);
       if (this.playerTrail.length > 10) this.playerTrail.shift()?.destroy();
@@ -343,29 +349,73 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     FLOATING PLAYER PREVIEW
+     FLOATING PLAYER PREVIEW  —  rocket (matches GameScene)
   -------------------------------------------------------- */
   private _buildFloatingPlayer() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const skin = SKINS[this.selectedSkin];
     const cx = W / 2, cy = H * 0.495;
+    this.floatingPlayerCX = cx;
+    this.floatingPlayerCY = cy;
 
-    const ring  = this.add.circle(cx, cy, 28, 0x000000, 0).setStrokeStyle(1, skin.color, 0.14);
-    const glow  = this.add.circle(cx, cy, 22, skin.color, 0.12);
-    const inner = this.add.circle(cx, cy, 16, skin.color, 0.3);
-    this.floatingPlayer = this.add.circle(cx, cy, 13, skin.color, 1);
-
+    /* Outer glow ring (stays as arc, cosmetic only) */
+    const glow = this.add.circle(cx, cy, 30, skin.color, 0.08);
     this.tweens.add({
-      targets: [glow, inner, ring],
-      alpha: { from: glow.alpha, to: glow.alpha * 0.2 },
-      scaleX: 1.15, scaleY: 1.15,
+      targets: glow,
+      alpha: { from: 0.08, to: 0.02 }, scaleX: 1.2, scaleY: 1.2,
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
+
+    /* Build graphics object so we can redraw on skin change */
+    this.floatingPlayerGfx = this.add.graphics();
+    this._drawRocketGfx(this.floatingPlayerGfx, skin.color);
+
+    this.floatingPlayer = this.add.container(cx, cy, [this.floatingPlayerGfx]);
+
+    /* Float bob tween — animates the container */
     this.tweens.add({
-      targets: [this.floatingPlayer, glow, inner, ring],
+      targets: [this.floatingPlayer, glow],
       y: '-=12',
       duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
+  }
+
+  /* Draw (or redraw) the rocket Graphics relative to (0,0) */
+  private _drawRocketGfx(g: Phaser.GameObjects.Graphics, color: number) {
+    const col   = color;
+    const dark  = Phaser.Display.Color.IntegerToColor(col).darken(30).color;
+    const light = Phaser.Display.Color.IntegerToColor(col).lighten(40).color;
+
+    g.clear();
+
+    /* Nose cone */
+    g.fillStyle(light, 1);
+    g.fillTriangle(-9, -10, 9, -10, 0, -26);
+
+    /* Body */
+    g.fillStyle(col, 1);
+    g.fillRect(-8, -10, 16, 23);
+
+    /* Cockpit window */
+    g.fillStyle(0x000000, 0.6);
+    g.fillCircle(0, -4, 5);
+    g.fillStyle(0x88eeff, 0.9);
+    g.fillCircle(0, -4, 3.5);
+
+    /* Left fin */
+    g.fillStyle(dark, 1);
+    g.fillTriangle(-8, 3, -18, 13, -8, 13);
+
+    /* Right fin */
+    g.fillTriangle(8, 3, 18, 13, 8, 13);
+
+    /* Nozzle */
+    g.fillStyle(0x222244, 1);
+    g.fillRect(-6, 13, 12, 5);
+
+    /* Neon outline */
+    g.lineStyle(1, col, 0.7);
+    g.strokeRect(-8, -10, 16, 23);
   }
 
   /* --------------------------------------------------------
@@ -420,7 +470,8 @@ export class StartScene extends Phaser.Scene {
 
   private _updateFloatingPlayerColor() {
     const col = SKINS[this.selectedSkin].color;
-    this.floatingPlayer.setFillStyle(col);
+    /* Redraw rocket graphics with new skin color */
+    this._drawRocketGfx(this.floatingPlayerGfx, col);
     this.playerTrail.forEach(d => d.setFillStyle(col));
   }
 
