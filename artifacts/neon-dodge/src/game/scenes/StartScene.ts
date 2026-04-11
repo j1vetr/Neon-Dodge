@@ -18,13 +18,14 @@ export class StartScene extends Phaser.Scene {
   private skinDots: Phaser.GameObjects.Arc[] = [];
   private skinRings: Phaser.GameObjects.Arc[] = [];
 
-  /* Glitch objects (title copies) */
-  private glitchObjs: Phaser.GameObjects.Text[] = [];
+  /* Glitch */
+  private glitchObjs: Phaser.GameObjects.Image[] = [];
   private glitchTimer = 0;
   private glitchActive = false;
 
-  /* Title refs for glow pulse */
-  private titleGlows: Phaser.GameObjects.Text[] = [];
+  /* Logo ref for glitch */
+  private logoImg!: Phaser.GameObjects.Image;
+  private logoGlow!: Phaser.GameObjects.Rectangle;
 
   constructor() { super({ key: 'StartScene' }); }
 
@@ -40,8 +41,8 @@ export class StartScene extends Phaser.Scene {
     this._drawStars();
     this._drawScanlines();
 
-    /* ── Title ─────────────────────────────────────────── */
-    this._buildTitle();
+    /* ── Logo ──────────────────────────────────────────── */
+    this._buildLogo();
 
     /* ── High score badge ──────────────────────────────── */
     this._buildHighScore();
@@ -166,106 +167,86 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     TITLE — layered glow + entry animation
+     LOGO — image with glow, float and entry animation
   -------------------------------------------------------- */
-  private _buildTitle() {
+  private _buildLogo() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const nY = H * 0.155, dY = H * 0.265;
+    const cx = W / 2, cy = H * 0.225;
 
-    /* Glow halos (deep blur layers) */
-    const haloNeon = this.add.text(W / 2, nY, 'NEON', {
-      fontSize: '74px', fontFamily: 'monospace',
-      color: '#003344', stroke: '#00ffff', strokeThickness: 28, alpha: 0.18,
-    }).setOrigin(0.5).setAlpha(0.18);
+    /* Target display size (logo is square) */
+    const logoSize = 210;
 
-    const haloDodge = this.add.text(W / 2, dY, 'DODGE', {
-      fontSize: '74px', fontFamily: 'monospace',
-      color: '#330011', stroke: '#ff2060', strokeThickness: 28, alpha: 0.18,
-    }).setOrigin(0.5).setAlpha(0.18);
+    /* Dark background rect — masks any transparent corner bleed in Canvas mode */
+    this.add.rectangle(cx, cy, logoSize + 2, logoSize + 2, COLOR_BG, 1);
 
-    /* Mid glow */
-    const midNeon = this.add.text(W / 2, nY, 'NEON', {
-      fontSize: '74px', fontFamily: 'monospace',
-      color: '#005566', stroke: '#00ffff', strokeThickness: 10, alpha: 0.35,
-    }).setOrigin(0.5).setAlpha(0.35);
+    /* Coloured glow halo behind logo */
+    this.logoGlow = this.add.rectangle(cx, cy, logoSize + 44, logoSize + 44, 0x330088, 0.0)
+      .setStrokeStyle(1, 0x8844ff, 0.0);
 
-    const midDodge = this.add.text(W / 2, dY, 'DODGE', {
-      fontSize: '74px', fontFamily: 'monospace',
-      color: '#440022', stroke: '#ff2060', strokeThickness: 10, alpha: 0.35,
-    }).setOrigin(0.5).setAlpha(0.35);
+    /* Soft outer glow circle */
+    const halo = this.add.circle(cx, cy, logoSize * 0.62, 0x4400cc, 0.1);
 
-    /* Crisp top layer */
-    const neon = this.add.text(W / 2, nY, 'NEON', {
-      fontSize: '74px', fontFamily: 'monospace', color: '#00ffff',
-      stroke: '#00ffff', strokeThickness: 1,
-    }).setOrigin(0.5);
+    /* The actual logo image */
+    this.logoImg = this.add.image(cx, cy, 'logo');
+    this.logoImg.setDisplaySize(logoSize, logoSize);
 
-    const dodge = this.add.text(W / 2, dY, 'DODGE', {
-      fontSize: '74px', fontFamily: 'monospace', color: '#ff2060',
-      stroke: '#ff2060', strokeThickness: 1,
-    }).setOrigin(0.5);
-
-    this.titleGlows = [haloNeon, haloDodge, midNeon, midDodge, neon, dodge];
-
-    /* Breathing glow on halos */
+    /* Breathing glow on halo */
     this.tweens.add({
-      targets: [haloNeon, haloDodge],
-      alpha: { from: 0.18, to: 0.38 },
+      targets: halo,
+      alpha: { from: 0.07, to: 0.22 },
+      scaleX: 1.12, scaleY: 1.12,
+      duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    /* Float bob — logo gently drifts up/down */
+    this.tweens.add({
+      targets: [this.logoImg, halo, this.logoGlow],
+      y: `-=10`,
       duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
-    this.tweens.add({
-      targets: [midNeon, midDodge],
-      alpha: { from: 0.35, to: 0.65 },
-      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      delay: 200,
-    });
 
-    /* Entry: NEON slides from left, DODGE from right */
-    const targets = [haloNeon, midNeon, neon];
-    const targetsD = [haloDodge, midDodge, dodge];
-
-    targets.forEach(t => { t.x = -W * 0.3; });
-    targetsD.forEach(t => { t.x = W * 1.3; });
-
+    /* Entry: scale up from 0 + fade in */
+    this.logoImg.setScale(0.4).setAlpha(0);
     this.tweens.add({
-      targets, x: W / 2,
-      duration: 550, ease: 'Back.Out', delay: 50,
-    });
-    this.tweens.add({
-      targets: targetsD, x: W / 2,
-      duration: 550, ease: 'Back.Out', delay: 120,
+      targets: this.logoImg,
+      scaleX: logoSize / this.logoImg.width,
+      scaleY: logoSize / this.logoImg.height,
+      alpha: 1,
+      duration: 600, ease: 'Back.Out', delay: 80,
     });
   }
 
   /* --------------------------------------------------------
-     GLITCH — RGB-split flash on title
+     GLITCH — RGB-split flash on logo
   -------------------------------------------------------- */
   private _fireGlitch() {
     this.glitchActive = true;
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const words  = ['NEON', 'DODGE'];
-    const yPos   = [H * 0.155, H * 0.265];
-    const colors = ['#ff0044', '#00ffff', '#ffff00'];
+    const cy = H * 0.225;
+    const logoSize = 210;
 
-    /* Create 2-3 offset ghost copies */
-    for (let pass = 0; pass < 3; pass++) {
-      words.forEach((word, wi) => {
-        const c = colors[pass % colors.length];
-        const ox = Phaser.Math.Between(-8, 8);
-        const oy = Phaser.Math.Between(-3, 3);
-        const g = this.add.text(W / 2 + ox, yPos[wi] + oy, word, {
-          fontSize: '74px', fontFamily: 'monospace',
-          color: c, alpha: 0.45,
-        }).setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD);
-        this.glitchObjs.push(g);
-      });
+    /* 3 offset ghost copies of the logo with additive blend + tint */
+    const tints = [0xff0044, 0x00ffff, 0xffee00];
+    for (let i = 0; i < 3; i++) {
+      const ox = Phaser.Math.Between(-10, 10);
+      const oy = Phaser.Math.Between(-5, 5);
+      const ghost = this.add.image(W / 2 + ox, cy + oy, 'logo')
+        .setDisplaySize(logoSize, logoSize)
+        .setAlpha(0.35)
+        .setTint(tints[i])
+        .setBlendMode(Phaser.BlendModes.ADD);
+      this.glitchObjs.push(ghost);
     }
 
-    /* Kill ghosts after short delay */
-    const dur = 80 + Math.random() * 140;
+    /* Brief horizontal offset on the real logo */
+    const origX = this.logoImg.x;
+    this.logoImg.x = origX + Phaser.Math.Between(-6, 6);
+
+    const dur = 70 + Math.random() * 130;
     this.time.delayedCall(dur, () => {
       this.glitchObjs.forEach(g => g.destroy());
       this.glitchObjs = [];
+      this.logoImg.x = origX;
       this.glitchActive = false;
       this.glitchTimer = 0;
     });
@@ -280,15 +261,15 @@ export class StartScene extends Phaser.Scene {
 
     const div = this.add.graphics();
     div.lineStyle(1, 0x00ffff, 0.08);
-    div.lineBetween(W * 0.15, H * 0.355, W * 0.85, H * 0.355);
+    div.lineBetween(W * 0.15, H * 0.385, W * 0.85, H * 0.385);
 
     if (hi > 0) {
-      this.add.text(W / 2, H * 0.38, `★  BEST  ${hi}`, {
+      this.add.text(W / 2, H * 0.41, `★  BEST  ${hi}`, {
         fontSize: '15px', fontFamily: 'monospace', color: '#33aacc',
         stroke: '#006688', strokeThickness: 1,
       }).setOrigin(0.5);
     } else {
-      this.add.text(W / 2, H * 0.38, 'NO RECORD YET', {
+      this.add.text(W / 2, H * 0.41, 'NO RECORD YET', {
         fontSize: '13px', fontFamily: 'monospace', color: '#1a3040',
       }).setOrigin(0.5);
     }
@@ -300,7 +281,7 @@ export class StartScene extends Phaser.Scene {
   private _buildFloatingPlayer() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const skin = SKINS[this.selectedSkin];
-    const cx = W / 2, cy = H * 0.478;
+    const cx = W / 2, cy = H * 0.495;
 
     /* Orbit ring */
     const ring = this.add.circle(cx, cy, 28, 0x000000, 0)
@@ -336,7 +317,7 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _buildSkinSelector() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cy = H * 0.565;
+    const cy = H * 0.578;
     const spacing = 38;
     const total = SKINS.length;
     const startX = W / 2 - ((total - 1) / 2) * spacing;
@@ -403,7 +384,7 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _buildPlayButton() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cx = W / 2, cy = H * 0.682;
+    const cx = W / 2, cy = H * 0.695;
 
     /* Outer glow rectangle */
     const glow = this.add.rectangle(cx, cy, 210, 54, 0x00ffff, 0.04)

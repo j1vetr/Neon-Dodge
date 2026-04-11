@@ -6,6 +6,7 @@
    ========================================================= */
 
 import Phaser from 'phaser';
+import { PreloadScene } from './scenes/PreloadScene';
 import { StartScene } from './scenes/StartScene';
 import { GameScene } from './scenes/GameScene';
 import { GameOverScene } from './scenes/GameOverScene';
@@ -18,7 +19,7 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     height: GAME_HEIGHT,
     backgroundColor: `#${COLOR_BG.toString(16).padStart(6, '0')}`,
     parent,
-    scene: [StartScene, GameScene, GameOverScene],
+    scene: [PreloadScene, StartScene, GameScene, GameOverScene],
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
