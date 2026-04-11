@@ -681,6 +681,10 @@ export class GameScene extends Phaser.Scene {
     const speed = rawSpeed * (this.time.now < this.slowUntil ? 0.38 : 1);
     const toRemove: number[] = [];
 
+    /* Compute current lerped colour once — applied to every bar this frame */
+    const liveColor = this._lerpWallColor();
+    const liveStroke = Phaser.Display.Color.IntegerToColor(liveColor).lighten(20).color;
+
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
       obs.body.y += speed * dt;
@@ -693,6 +697,10 @@ export class GameScene extends Phaser.Scene {
         } else {
           obs.body.setFillStyle(COLOR_LASER, 0.92);
         }
+      } else {
+        /* Non-laser bars: update colour live every frame */
+        obs.body.setFillStyle(liveColor, 1);
+        obs.body.setStrokeStyle(1, liveStroke, 0.5);
       }
 
       /* Near-miss + combo: first time obstacle row crosses PLAYER_START_Y */
