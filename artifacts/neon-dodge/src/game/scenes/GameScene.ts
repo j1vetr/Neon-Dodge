@@ -528,12 +528,11 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, color, 1);
     body.setDepth(6);
 
-    /* Icon — PNG for both types, ADD blend makes black transparent, tint colours it */
+    /* Icon — transparent PNG, tint colours it with the power-up colour */
     const iconKey = type === 'shield' ? 'icon-shield' : 'icon-double';
     const icon = this.add.image(x, y, iconKey)
       .setDisplaySize(30, 30)
       .setTint(color)
-      .setBlendMode(Phaser.BlendModes.ADD)
       .setDepth(7);
 
     /* Pulsing ring tween */
@@ -946,8 +945,7 @@ export class GameScene extends Phaser.Scene {
   private _buildRocket(x: number, y: number, color: number): Phaser.GameObjects.Container {
     const img = this.add.image(0, 0, 'player-rocket')
       .setDisplaySize(38, 42)
-      .setTint(color)
-      .setBlendMode(Phaser.BlendModes.ADD);
+      .setTint(color);
     const container = this.add.container(x, y, [img]);
     return container;
   }

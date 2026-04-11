@@ -28,10 +28,12 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       activePointers: 3,
     },
     antialias: true,
-    roundPixels: true,
+    roundPixels: false,
     render: {
       antialias: true,
+      antialiasGL: true,
       pixelArt: false,
+      powerPreference: 'high-performance',
     },
   };
 

@@ -60,8 +60,7 @@ export class GameOverScene extends Phaser.Scene {
 
     const rocketImg = this.add.image(W / 2, 106, 'player-rocket')
       .setDisplaySize(48, 54)
-      .setTint(skin.color)
-      .setBlendMode(Phaser.BlendModes.ADD);
+      .setTint(skin.color);
     this.tweens.add({ targets: [rocketImg, glow], y: '+=4', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     /* ---- Divider ---- */

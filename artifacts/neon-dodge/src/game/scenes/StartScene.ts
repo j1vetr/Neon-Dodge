@@ -369,8 +369,7 @@ export class StartScene extends Phaser.Scene {
     /* Build image object — tint updated on skin change */
     this.floatingPlayerImg = this.add.image(0, 0, 'player-rocket')
       .setDisplaySize(48, 54)
-      .setTint(skin.color)
-      .setBlendMode(Phaser.BlendModes.ADD);
+      .setTint(skin.color);
 
     this.floatingPlayer = this.add.container(cx, cy, [this.floatingPlayerImg]);
 
