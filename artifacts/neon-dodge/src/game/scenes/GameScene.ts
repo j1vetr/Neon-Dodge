@@ -310,8 +310,23 @@ export class GameScene extends Phaser.Scene {
     const y = -20;
 
     if (isLaser) {
-      const laserGfx = this.add.rectangle(W / 2, y, W - 4, LASER_THICKNESS, COLOR_LASER, 0.25);
-      this.obstacles.push({ body: laserGfx, isLaser: true, born: time + LASER_WARN_DURATION });
+      /* Laser has a narrow gap the player must pass through */
+      const gapSize = Phaser.Math.Between(PLAYER_SIZE * 3, PLAYER_SIZE * 4);
+      const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
+
+      const leftW = gapX;
+      const leftX = leftW / 2;
+      const laserLeft = this.add.rectangle(leftX, y, leftW, LASER_THICKNESS, COLOR_LASER, 0.25);
+
+      const rightW = W - gapX - gapSize;
+      const rightX = gapX + gapSize + rightW / 2;
+      const laserRight = this.add.rectangle(rightX, y, rightW, LASER_THICKNESS, COLOR_LASER, 0.25);
+
+      const born = time + LASER_WARN_DURATION;
+      this.obstacles.push(
+        { body: laserLeft,  isLaser: true, born },
+        { body: laserRight, isLaser: true, born },
+      );
       playLaserWarn();
     } else {
       /* Use current level's gap range */
@@ -353,8 +368,8 @@ export class GameScene extends Phaser.Scene {
           const flicker = 0.15 + 0.35 * Math.sin(time * 0.025);
           obs.body.setFillStyle(0xff4400, flicker);
         } else {
+          /* Keep each piece at its spawned width — do NOT override with full-screen size */
           obs.body.setFillStyle(COLOR_LASER, 0.92);
-          obs.body.setDisplaySize(GAME_WIDTH - 4, LASER_THICKNESS);
         }
       }
 
