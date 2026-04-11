@@ -9,6 +9,7 @@ import {
   STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
   STORAGE_HIGHSCORE,
 } from '../constants';
+import { t } from '../i18n';
 
 export class GameOverScene extends Phaser.Scene {
   private score = 0;
@@ -24,12 +25,12 @@ export class GameOverScene extends Phaser.Scene {
     score: number; best: number; skin: number;
     level?: number; maxCombo?: number; elapsedTime?: number;
   }) {
-    this.score       = data.score ?? 0;
-    this.best        = data.best ?? 0;
-    this.skinIndex   = data.skin ?? 0;
+    this.score        = data.score ?? 0;
+    this.best         = data.best ?? 0;
+    this.skinIndex    = data.skin ?? 0;
     this.levelReached = data.level ?? 1;
-    this.maxCombo    = data.maxCombo ?? 0;
-    this.elapsedTime = data.elapsedTime ?? 0;
+    this.maxCombo     = data.maxCombo ?? 0;
+    this.elapsedTime  = data.elapsedTime ?? 0;
   }
 
   create() {
@@ -43,8 +44,8 @@ export class GameOverScene extends Phaser.Scene {
     /* ---- Top accent line ---- */
     this.add.rectangle(W / 2, 0, W, 3, 0xff2060, 1);
 
-    /* ---- GAME OVER header — Orbitron hollow outline, same as title ---- */
-    this.add.text(W / 2, 52, 'GAME OVER', {
+    /* ---- GAME OVER header ---- */
+    this.add.text(W / 2, 52, t().gameOver, {
       fontSize: '34px',
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
@@ -76,20 +77,20 @@ export class GameOverScene extends Phaser.Scene {
       strokeThickness: 2,
       shadow: { color: '#00ffff', blur: 12, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
-    this.add.text(W / 2, 196, 'SCORE', {
+    this.add.text(W / 2, 196, t().score, {
       fontSize: '11px', fontFamily: 'monospace', color: '#334455', letterSpacing: 3,
     }).setOrigin(0.5);
 
     /* ---- New best badge ---- */
     const newBest = this.score > 0 && this.score >= this.best;
     if (newBest) {
-      const nb = this.add.text(W / 2, 218, '★  NEW BEST  ★', {
+      const nb = this.add.text(W / 2, 218, t().newBest, {
         fontSize: '14px', fontFamily: 'monospace', color: '#ffcc00',
         stroke: '#885500', strokeThickness: 2,
       }).setOrigin(0.5);
       this.tweens.add({ targets: nb, alpha: 0.25, duration: 550, yoyo: true, repeat: -1 });
     } else {
-      this.add.text(W / 2, 218, `Best  ${this.best}`, {
+      this.add.text(W / 2, 218, `${t().best}  ${this.best}`, {
         fontSize: '13px', fontFamily: 'monospace', color: '#334455',
       }).setOrigin(0.5);
     }
@@ -110,13 +111,13 @@ export class GameOverScene extends Phaser.Scene {
     this._divider(H * 0.57);
 
     /* ---- Buttons ---- */
-    this._makeButton(W / 2, H * 0.645, '▶  WATCH AD  +1 LIFE', '#ffcc00', 210, 38,
+    this._makeButton(W / 2, H * 0.645, t().watchAd, '#ffcc00', 210, 38,
       () => this._showAdPlaceholder());
 
-    this._makeButton(W / 2, H * 0.735, '↩  PLAY AGAIN', '#00ffff', 180, 40,
+    this._makeButton(W / 2, H * 0.735, t().playAgain, '#00ffff', 180, 40,
       () => this.scene.start('GameScene', { skin: this.skinIndex }));
 
-    this._makeButton(W / 2, H * 0.825, 'MENU', '#ff2060', 120, 34,
+    this._makeButton(W / 2, H * 0.825, t().menu, '#ff2060', 120, 34,
       () => this.scene.start('StartScene'));
 
     /* ---- Bottom accent ---- */
@@ -143,9 +144,9 @@ export class GameOverScene extends Phaser.Scene {
       }).setOrigin(0.5);
     };
 
-    col(W * 0.22, `LVL ${this.levelReached}`, 'LEVEL', '#00ffcc');
-    col(W * 0.50, `${this.elapsedTime}s`, 'SURVIVED', '#aaddff');
-    col(W * 0.78, `${this.maxCombo}`, 'MAX COMBO', '#ffcc00');
+    col(W * 0.22, `${t().lvl} ${this.levelReached}`, t().level, '#00ffcc');
+    col(W * 0.50, `${this.elapsedTime}s`, t().survived, '#aaddff');
+    col(W * 0.78, `${this.maxCombo}`, t().maxCombo, '#ffcc00');
   }
 
   private _lifetimeStats(cy: number) {
@@ -154,7 +155,7 @@ export class GameOverScene extends Phaser.Scene {
     const totalTime   = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0');
     const maxComboAll = parseInt(localStorage.getItem(STORAGE_MAX_COMBO) || '0', 10);
 
-    this.add.text(W / 2, cy - 18, 'ALL TIME', {
+    this.add.text(W / 2, cy - 18, t().allTime, {
       fontSize: '10px', fontFamily: 'monospace', color: '#223344', letterSpacing: 4,
     }).setOrigin(0.5);
 
@@ -167,19 +168,9 @@ export class GameOverScene extends Phaser.Scene {
       }).setOrigin(0.5);
     };
 
-    col(W * 0.22, `${gamesPlayed}`, 'GAMES');
-    col(W * 0.50, `${Math.floor(totalTime)}s`, 'TOTAL TIME');
-    col(W * 0.78, `${maxComboAll}`, 'BEST COMBO');
-  }
-
-  private _glowText(x: number, y: number, text: string, size: string, color: string, stroke: string) {
-    for (let i = 3; i >= 0; i--) {
-      this.add.text(x, y, text, {
-        fontSize: size, fontFamily: 'monospace',
-        color: i === 0 ? color : '#000000',
-        stroke, strokeThickness: i * 3,
-      }).setOrigin(0.5).setAlpha(i === 0 ? 1 : 0.18);
-    }
+    col(W * 0.22, `${gamesPlayed}`, t().games);
+    col(W * 0.50, `${Math.floor(totalTime)}s`, t().totalTime);
+    col(W * 0.78, `${maxComboAll}`, t().bestCombo);
   }
 
   private _makeButton(x: number, y: number, label: string, color: string, w: number, h: number, cb: () => void) {
@@ -214,16 +205,16 @@ export class GameOverScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W * 0.82, H * 0.38, 0x0a0a18, 1)
       .setStrokeStyle(2, 0xffcc00, 1).setDepth(101);
 
-    this.add.text(W / 2, H * 0.38, 'AD PLACEHOLDER', {
+    this.add.text(W / 2, H * 0.38, t().adTitle, {
       fontSize: '15px', fontFamily: 'monospace', color: '#ffcc00',
     }).setOrigin(0.5).setDepth(102);
 
-    this.add.text(W / 2, H * 0.46, 'In a real release,\nan ad would play here.', {
+    this.add.text(W / 2, H * 0.46, t().adBody, {
       fontSize: '12px', fontFamily: 'monospace', color: '#667788', align: 'center',
     }).setOrigin(0.5).setDepth(102);
 
     let countdown = 5;
-    const cTxt = this.add.text(W / 2, H * 0.55, `Close in ${countdown}s`, {
+    const cTxt = this.add.text(W / 2, H * 0.55, `${t().closeIn} ${countdown}s`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#334455',
     }).setOrigin(0.5).setDepth(102);
 
@@ -231,7 +222,7 @@ export class GameOverScene extends Phaser.Scene {
       delay: 1000, repeat: 4,
       callback: () => {
         countdown--;
-        cTxt.setText(countdown > 0 ? `Close in ${countdown}s` : 'Tap to continue');
+        cTxt.setText(countdown > 0 ? `${t().closeIn} ${countdown}s` : t().tapContinue);
       },
     });
 

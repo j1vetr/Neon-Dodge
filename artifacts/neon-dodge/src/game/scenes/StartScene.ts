@@ -9,6 +9,7 @@ import {
   STORAGE_HIGHSCORE, STORAGE_SKIN,
   STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
 } from '../constants';
+import { getLang, setLang, t } from '../i18n';
 
 /* ── Module-level helpers ───────────────────────────────── */
 function _diamond(
@@ -38,8 +39,8 @@ export class StartScene extends Phaser.Scene {
   /* Title refs for glitch */
   private glitchTimer  = 0;
   private glitchActive = false;
-  private titleNeon!: Phaser.GameObjects.Text;   // "NEON" small word
-  private titleDodge!: Phaser.GameObjects.Text;  // "DODGE" hero
+  private titleNeon!: Phaser.GameObjects.Text;
+  private titleDodge!: Phaser.GameObjects.Text;
   private glitchTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() { super({ key: 'StartScene' }); }
@@ -62,6 +63,7 @@ export class StartScene extends Phaser.Scene {
     this._buildFloatingPlayer();
     this._buildSkinSelector();
     this._buildPlayButton();
+    this._buildLangSelector();
     this._buildStats();
 
     this.add.text(W - 10, H - 14, 'NEON DODGE v2', {
@@ -77,7 +79,6 @@ export class StartScene extends Phaser.Scene {
     if (this.playerTrailTimer > 55) {
       this.playerTrailTimer = 0;
       const skin = SKINS[this.selectedSkin];
-      /* Emit flame from rocket nozzle (nozzle bottom is +27px from container centre for 54px tall image) */
       const flameColors = [skin.color, 0xffffff, 0xff8800, 0xffff00];
       const fCol = flameColors[Math.floor(Math.random() * flameColors.length)];
       const dot = this.add.circle(
@@ -106,9 +107,9 @@ export class StartScene extends Phaser.Scene {
     const vX = W / 2, vY = H * 0.58;
 
     for (let i = 0; i <= 10; i++) {
-      const t = (i / 10) ** 1.8;
-      const y = vY + (H - vY) * t;
-      g.lineStyle(1, 0x00aaff, 0.06 + t * 0.18);
+      const t2 = (i / 10) ** 1.8;
+      const y = vY + (H - vY) * t2;
+      g.lineStyle(1, 0x00aaff, 0.06 + t2 * 0.18);
       g.lineBetween(0, y, W, y);
     }
     for (let i = 0; i <= 12; i++) {
@@ -153,20 +154,16 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     TITLE — minimal Awwwards-style neon typography
-     No thick boxy strokes. Glow = thin overlapping copies +
-     Phaser.Graphics lines as decorative elements.
+     TITLE
   -------------------------------------------------------- */
   private _buildTitle() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cx = W / 2;
 
-    /* ── Vertical anchors ── */
-    const neonY  = H * 0.148;  // "NEON" row
-    const dodgeY = H * 0.242;  // "DODGE" row
-    const tagY   = H * 0.324;  // tagline
+    const neonY  = H * 0.148;
+    const dodgeY = H * 0.242;
+    const tagY   = H * 0.324;
 
-    /* ── Thin decorative lines only (no text bounding boxes) ── */
     const dg = this.add.graphics();
     dg.lineStyle(1, 0x00eeff, 0.38);
     dg.lineBetween(cx - 102, neonY - 24, cx - 8, neonY - 24);
@@ -177,16 +174,9 @@ export class StartScene extends Phaser.Scene {
     dg.lineBetween(cx +   8, dodgeY + 52, cx + 122, dodgeY + 52);
     _diamond(dg, cx, dodgeY + 52, 4, 0xff22aa, 0.6);
 
-    /* ── Matrix scramble → reveal per character ── */
     const SCRAMBLE = '!@#&%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const floatAll: Phaser.GameObjects.GameObject[] = [dg];
-
-    /* ── spawnChar: ONE object per letter, outline-only style ─────────
-       Fill = game background color  →  interior appears hollow/dark
-       Stroke = neon color            →  outline glows like a neon tube
-       Zero glow-box layers: no overlapping objects, no rectangles.
-    ─────────────────────────────────────────────────────────────────── */
-    const BG = '#050510'; // same as COLOR_BG hex
+    const BG = '#050510';
 
     const spawnChar = (
       ch: string, x: number, y: number,
@@ -194,35 +184,31 @@ export class StartScene extends Phaser.Scene {
       mainPx: number, strokeW: number,
       startDelay: number,
     ): Phaser.GameObjects.Text => {
-      /* Single crisp text — hollow neon-tube effect */
       const lc = this.add.text(x, y, ch, {
         fontSize: `${mainPx}px`,
         fontFamily: '"Orbitron", monospace',
         fontStyle: 'bold',
-        color: BG,               // interior = dark bg  →  hollow look
-        stroke: outlineColor,    // neon outline
+        color: BG,
+        stroke: outlineColor,
         strokeThickness: strokeW,
         shadow: { color: outlineColor, blur: 10, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5).setAlpha(0);
 
-      /* Matrix scramble → lock on correct char */
       this.time.delayedCall(startDelay, () => {
         lc.setAlpha(1.0);
-        let t = 0;
+        let tick = 0;
         const reps = 5 + Math.floor(Math.random() * 4);
         const ev = this.time.addEvent({
           delay: 55, repeat: reps,
           callback: () => {
             lc.setText(SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)]);
-            if (++t >= reps) {
+            if (++tick >= reps) {
               lc.setText(ch);
-              /* ping: momentary brightness spike then settle */
               this.tweens.add({
                 targets: lc,
                 alpha: { from: 1.0, to: 0.55 },
                 duration: 90, yoyo: true,
                 onComplete: () => {
-                  /* subtle breathing pulse after reveal */
                   this.tweens.add({
                     targets: lc,
                     alpha: { from: 1.0, to: 0.78 },
@@ -242,21 +228,18 @@ export class StartScene extends Phaser.Scene {
       return lc;
     };
 
-    /* ── NEON letters — 24px Orbitron, 2px stroke, cyan outline ── */
     const NEON = ['N', 'E', 'O', 'N'];
     const nSp = 28, nSt = cx - ((NEON.length - 1) / 2) * nSp;
     const neonLetters = NEON.map((ch, i) =>
       spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', 24, 1.5, 40 + i * 80));
     this.titleNeon = neonLetters[neonLetters.length - 1];
 
-    /* ── DODGE letters — 66px Orbitron, 2px stroke, pink outline ── */
     const DODGE = ['D', 'O', 'D', 'G', 'E'];
     const dSp = 56, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
     const dodgeLetters = DODGE.map((ch, i) =>
       spawnChar(ch, dSt + i * dSp, dodgeY, '#ff22aa', 66, 2, 280 + i * 75));
     this.titleDodge = dodgeLetters[dodgeLetters.length - 1];
 
-    /* ── Tagline fades in after all letters resolve ── */
     const tag = this.add.text(cx, tagY, 'S U R V I V E   T H E   N E O N', {
       fontSize: '8px', fontFamily: 'monospace', color: '#253340', letterSpacing: 2,
     }).setOrigin(0.5).setAlpha(0);
@@ -264,7 +247,6 @@ export class StartScene extends Phaser.Scene {
     this.time.delayedCall(1100, () =>
       this.tweens.add({ targets: tag, alpha: 0.55, duration: 600 }));
 
-    /* ── Float bob starts after all characters have settled ── */
     this.time.delayedCall(1300, () => {
       this.tweens.add({
         targets: floatAll,
@@ -273,7 +255,6 @@ export class StartScene extends Phaser.Scene {
       });
     });
 
-    /* ── Periodic neon-label flicker ── */
     this.time.addEvent({
       delay: 3200, loop: true,
       callback: () => {
@@ -286,7 +267,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     GLITCH — RGB-split flash on title
+     GLITCH
   -------------------------------------------------------- */
   private _fireGlitch() {
     this.glitchActive = true;
@@ -337,19 +318,19 @@ export class StartScene extends Phaser.Scene {
     div.lineBetween(W * 0.15, H * 0.385, W * 0.85, H * 0.385);
 
     if (hi > 0) {
-      this.add.text(W / 2, H * 0.41, `★  BEST  ${hi}`, {
+      this.add.text(W / 2, H * 0.41, `★  ${t().best}  ${hi}`, {
         fontSize: '15px', fontFamily: 'monospace', color: '#33aacc',
         stroke: '#006688', strokeThickness: 1,
       }).setOrigin(0.5);
     } else {
-      this.add.text(W / 2, H * 0.41, 'NO RECORD YET', {
+      this.add.text(W / 2, H * 0.41, t().noRecord, {
         fontSize: '13px', fontFamily: 'monospace', color: '#1a3040',
       }).setOrigin(0.5);
     }
   }
 
   /* --------------------------------------------------------
-     FLOATING PLAYER PREVIEW  —  rocket (matches GameScene)
+     FLOATING PLAYER PREVIEW
   -------------------------------------------------------- */
   private _buildFloatingPlayer() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
@@ -358,7 +339,6 @@ export class StartScene extends Phaser.Scene {
     this.floatingPlayerCX = cx;
     this.floatingPlayerCY = cy;
 
-    /* Outer glow ring (stays as arc, cosmetic only) */
     const glow = this.add.circle(cx, cy, 30, skin.color, 0.08);
     this.tweens.add({
       targets: glow,
@@ -366,14 +346,12 @@ export class StartScene extends Phaser.Scene {
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    /* Build image object — tint updated on skin change */
     this.floatingPlayerImg = this.add.image(0, 0, 'player-rocket')
       .setDisplaySize(48, 54)
       .setTint(skin.color);
 
     this.floatingPlayer = this.add.container(cx, cy, [this.floatingPlayerImg]);
 
-    /* Float bob tween — animates the container */
     this.tweens.add({
       targets: [this.floatingPlayer, glow],
       y: '-=12',
@@ -391,7 +369,7 @@ export class StartScene extends Phaser.Scene {
     const total = SKINS.length;
     const startX = W / 2 - ((total - 1) / 2) * spacing;
 
-    this.add.text(W / 2, cy - 22, 'SELECT SKIN', {
+    this.add.text(W / 2, cy - 22, t().selectSkin, {
       fontSize: '10px', fontFamily: 'monospace', color: '#223344', letterSpacing: 3,
     }).setOrigin(0.5);
 
@@ -449,7 +427,7 @@ export class StartScene extends Phaser.Scene {
     const btn = this.add.rectangle(cx, cy, 196, 46, 0x000000, 0)
       .setStrokeStyle(2, 0x00ffff, 0.85)
       .setInteractive({ useHandCursor: true });
-    const label = this.add.text(cx, cy, '▶   PLAY', {
+    const label = this.add.text(cx, cy, t().play, {
       fontSize: '20px', fontFamily: 'monospace', color: '#00ffff',
       stroke: '#00ffff', strokeThickness: 1,
     }).setOrigin(0.5);
@@ -481,6 +459,54 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
+     LANGUAGE SELECTOR  (below PLAY button)
+  -------------------------------------------------------- */
+  private _buildLangSelector() {
+    const W = GAME_WIDTH, H = GAME_HEIGHT;
+    const cy = H * 0.775;
+    const lang = getLang();
+    const FLAG_SIZE = 26;
+    const gap = 20;
+
+    /* TR flag */
+    const flagTr = this.add.image(W / 2 - gap - FLAG_SIZE / 2, cy, 'flag-tr')
+      .setDisplaySize(FLAG_SIZE, FLAG_SIZE)
+      .setInteractive({ useHandCursor: true });
+
+    /* EN flag */
+    const flagEn = this.add.image(W / 2 + gap + FLAG_SIZE / 2, cy, 'flag-en')
+      .setDisplaySize(FLAG_SIZE, FLAG_SIZE)
+      .setInteractive({ useHandCursor: true });
+
+    /* Active highlight ring */
+    const activeTr = this.add.circle(flagTr.x, cy, FLAG_SIZE / 2 + 3, 0x000000, 0)
+      .setStrokeStyle(lang === 'tr' ? 2 : 0, 0x00ffff, 0.85);
+    const activeEn = this.add.circle(flagEn.x, cy, FLAG_SIZE / 2 + 3, 0x000000, 0)
+      .setStrokeStyle(lang === 'en' ? 2 : 0, 0x00ffff, 0.85);
+
+    /* Dim inactive flag */
+    flagTr.setAlpha(lang === 'tr' ? 1 : 0.38);
+    flagEn.setAlpha(lang === 'en' ? 1 : 0.38);
+
+    const _switch = (newLang: 'tr' | 'en') => {
+      if (getLang() === newLang) return;
+      setLang(newLang);
+      this.scene.restart();
+    };
+
+    flagTr.on('pointerdown', () => _switch('tr'));
+    flagEn.on('pointerdown', () => _switch('en'));
+
+    flagTr.on('pointerover', () => { if (lang !== 'tr') flagTr.setAlpha(0.7); });
+    flagTr.on('pointerout',  () => { if (lang !== 'tr') flagTr.setAlpha(0.38); });
+    flagEn.on('pointerover', () => { if (lang !== 'en') flagEn.setAlpha(0.7); });
+    flagEn.on('pointerout',  () => { if (lang !== 'en') flagEn.setAlpha(0.38); });
+
+    /* Suppress game-start on flag click */
+    void activeTr; void activeEn;
+  }
+
+  /* --------------------------------------------------------
      STATS FOOTER
   -------------------------------------------------------- */
   private _buildStats() {
@@ -490,7 +516,7 @@ export class StartScene extends Phaser.Scene {
 
     const totalTime = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0');
     const maxCombo  = parseInt(localStorage.getItem(STORAGE_MAX_COMBO)    || '0', 10);
-    const cy = H * 0.80;
+    const cy = H * 0.865;
 
     const dg = this.add.graphics();
     dg.lineStyle(1, 0x00ffff, 0.07);
@@ -505,8 +531,8 @@ export class StartScene extends Phaser.Scene {
       }).setOrigin(0.5);
     };
 
-    col(W * 0.22, `${gamesPlayed}`, 'GAMES');
-    col(W * 0.50, `${Math.floor(totalTime)}s`, 'TOTAL TIME');
-    col(W * 0.78, `${maxCombo}`, 'BEST COMBO');
+    col(W * 0.22, `${gamesPlayed}`, t().games);
+    col(W * 0.50, `${Math.floor(totalTime)}s`, t().totalTime);
+    col(W * 0.78, `${maxCombo}`, t().bestCombo);
   }
 }

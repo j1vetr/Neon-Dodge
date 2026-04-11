@@ -20,6 +20,7 @@ import {
   NEAR_MISS_DISTANCE, NEAR_MISS_BONUS,
   POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_DOUBLE_DURATION,
 } from '../constants';
+import { t } from '../i18n';
 import {
   playTap, playHit, playScore,
   playCombo, playNearMiss, playPowerUp, playShieldHit,
@@ -204,12 +205,12 @@ export class GameScene extends Phaser.Scene {
 
     /* HUD — best (bottom right) */
     this.highScore = parseInt(localStorage.getItem(STORAGE_HIGHSCORE) || '0', 10);
-    this.add.text(W - 12, H - 14, `Best: ${this.highScore}`, {
+    this.add.text(W - 12, H - 14, `${t().best}: ${this.highScore}`, {
       fontSize: '12px', fontFamily: 'monospace', color: '#334455',
     }).setOrigin(1, 1).setDepth(20);
 
     /* HUD — level (top left) */
-    this.levelTxt = this.add.text(12, 14, 'LVL 1', {
+    this.levelTxt = this.add.text(12, 14, `${t().lvl} 1`, {
       fontSize: '13px', fontFamily: 'monospace', color: '#ff2060',
     }).setOrigin(0, 0).setDepth(20);
 
@@ -503,7 +504,7 @@ export class GameScene extends Phaser.Scene {
   private _updateLevelLabel() {
     /* Level text colour is driven by _lerpWallColor() in update(),
        so we only update the text string here. */
-    this.levelTxt.setText(`LVL ${this.currentLevel + 1}`);
+    this.levelTxt.setText(`${t().lvl} ${this.currentLevel + 1}`);
   }
 
   /* --------------------------------------------------------
@@ -754,7 +755,7 @@ export class GameScene extends Phaser.Scene {
     border.setFillStyle(0x000000, 0); // transparent fill
 
     /* Title */
-    const title = this.add.text(0, -PH / 2 + 26, 'PAUSED', {
+    const title = this.add.text(0, -PH / 2 + 26, t().paused, {
       fontSize: '22px', fontFamily: 'monospace',
       color: '#050510', stroke: '#00ffff', strokeThickness: 2,
     }).setOrigin(0.5);
@@ -776,22 +777,22 @@ export class GameScene extends Phaser.Scene {
     };
 
     /* Resume button — extra gap below title */
-    const resume = makeBtn(-38, '▶  RESUME', 0x00ffcc, '#00ffcc');
+    const resume = makeBtn(-38, t().resume, 0x00ffcc, '#00ffcc');
     resume.btnBg.on('pointerdown', () => this._togglePause());
 
     /* Sound toggle button */
-    const soundLabel = isSoundEnabled() ? '🔊  SOUND ON' : '🔇  SOUND OFF';
+    const soundLabel = isSoundEnabled() ? t().soundOn : t().soundOff;
     const sound = makeBtn(16, soundLabel, 0x4488ff, '#4488ff');
     this.soundToggleLabel = sound.btnTxt;
     sound.btnBg.on('pointerdown', () => {
       const next = !isSoundEnabled();
       setSoundEnabled(next);
-      this.soundToggleLabel.setText(next ? '🔊  SOUND ON' : '🔇  SOUND OFF');
+      this.soundToggleLabel.setText(next ? t().soundOn : t().soundOff);
       if (next) startAmbient(this.currentLevel);
     });
 
     /* Main menu button */
-    const menu = makeBtn(70, '⟵  MAIN MENU', 0xff4477, '#ff4477');
+    const menu = makeBtn(70, t().mainMenu, 0xff4477, '#ff4477');
     menu.btnBg.on('pointerdown', () => {
       stopAmbient();
       this.scene.start('StartScene', { skin: this.skinIndex });
@@ -812,7 +813,7 @@ export class GameScene extends Phaser.Scene {
     if (this.paused) {
       stopAmbient();
       /* Update sound label in case changed outside */
-      this.soundToggleLabel.setText(isSoundEnabled() ? '🔊  SOUND ON' : '🔇  SOUND OFF');
+      this.soundToggleLabel.setText(isSoundEnabled() ? t().soundOn : t().soundOff);
       this.pauseOverlay.setVisible(true);
       this.pausePanel.setVisible(true);
       /* Dim the pause button while paused */
