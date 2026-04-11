@@ -1,6 +1,6 @@
 
 /* =========================================================
-   START SCENE — Awwwards-level redesign
+   START SCENE — animated neon title (no image logo)
    ========================================================= */
 
 import Phaser from 'phaser';
@@ -18,14 +18,12 @@ export class StartScene extends Phaser.Scene {
   private skinDots: Phaser.GameObjects.Arc[] = [];
   private skinRings: Phaser.GameObjects.Arc[] = [];
 
-  /* Glitch */
-  private glitchObjs: Phaser.GameObjects.Image[] = [];
-  private glitchTimer = 0;
-  private glitchActive = false;
-
-  /* Logo ref for glitch */
-  private logoImg!: Phaser.GameObjects.Image;
-  private logoGlow!: Phaser.GameObjects.Rectangle;
+  /* Title glitch */
+  private glitchTimer   = 0;
+  private glitchActive  = false;
+  private titleNeon!: Phaser.GameObjects.Text;
+  private titleDodge!: Phaser.GameObjects.Text;
+  private glitchTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() { super({ key: 'StartScene' }); }
 
@@ -41,8 +39,8 @@ export class StartScene extends Phaser.Scene {
     this._drawStars();
     this._drawScanlines();
 
-    /* ── Logo ──────────────────────────────────────────── */
-    this._buildLogo();
+    /* ── Animated NEON DODGE title ─────────────────────── */
+    this._buildTitle();
 
     /* ── High score badge ──────────────────────────────── */
     this._buildHighScore();
@@ -91,7 +89,7 @@ export class StartScene extends Phaser.Scene {
       });
     }
 
-    /* Glitch cycle: every ~4 s, glitch fires for 100-200ms */
+    /* Glitch cycle: every ~4s fires for 80–180ms */
     this.glitchTimer += delta;
     if (!this.glitchActive && this.glitchTimer > 4000 + Math.random() * 2000) {
       this.glitchTimer = 0;
@@ -105,19 +103,17 @@ export class StartScene extends Phaser.Scene {
   private _drawPerspectiveGrid() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const g = this.add.graphics();
-    const vX = W / 2, vY = H * 0.58; // vanishing point
+    const vX = W / 2, vY = H * 0.58;
 
-    /* Horizontal lines — exponentially spaced to give depth */
     const hCount = 10;
     for (let i = 0; i <= hCount; i++) {
-      const t = (i / hCount) ** 1.8; // curve toward horizon
+      const t = (i / hCount) ** 1.8;
       const y = vY + (H - vY) * t;
       const alpha = 0.06 + t * 0.18;
       g.lineStyle(1, 0x00aaff, alpha);
       g.lineBetween(0, y, W, y);
     }
 
-    /* Vertical lines radiating from vanishing point */
     const vCount = 12;
     for (let i = 0; i <= vCount; i++) {
       const bx = (i / vCount) * W;
@@ -126,7 +122,6 @@ export class StartScene extends Phaser.Scene {
       g.lineBetween(vX, vY, bx, H);
     }
 
-    /* Flat grid for upper half (very faint) */
     g.lineStyle(1, 0x001a33, 0.22);
     for (let x = 0; x <= W; x += 40) g.lineBetween(x, 0, x, vY);
     for (let y = 0; y <= vY; y += 40) g.lineBetween(0, y, W, y);
@@ -167,88 +162,148 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     LOGO — image with glow, float and entry animation
+     TITLE — layered neon glow text "NEON DODGE"
   -------------------------------------------------------- */
-  private _buildLogo() {
+  private _buildTitle() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cx = W / 2, cy = H * 0.225;
+    const cx = W / 2;
+    const neonY  = H * 0.155;
+    const dodgeY = H * 0.265;
 
-    /* Target display size (logo is square) */
-    const logoSize = 210;
+    const neonStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '62px',
+      fontFamily: '"Arial Black", "Impact", monospace',
+      fontStyle: 'bold',
+      color: '#00eeff',
+      stroke: '#006688',
+      strokeThickness: 4,
+      shadow: { color: '#00eeff', blur: 32, offsetX: 0, offsetY: 0, fill: true, stroke: true },
+    };
 
-    /* Dark background rect — masks any transparent corner bleed in Canvas mode */
-    this.add.rectangle(cx, cy, logoSize + 2, logoSize + 2, COLOR_BG, 1);
+    const dodgeStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '52px',
+      fontFamily: '"Arial Black", "Impact", monospace',
+      fontStyle: 'bold',
+      color: '#ff22aa',
+      stroke: '#880044',
+      strokeThickness: 3,
+      shadow: { color: '#ff22aa', blur: 28, offsetX: 0, offsetY: 0, fill: true, stroke: true },
+    };
 
-    /* Coloured glow halo behind logo */
-    this.logoGlow = this.add.rectangle(cx, cy, logoSize + 44, logoSize + 44, 0x330088, 0.0)
-      .setStrokeStyle(1, 0x8844ff, 0.0);
+    /* ── Outer glow layers (slightly bigger, lower alpha) ── */
+    const neonGlow = this.add.text(cx, neonY, 'NEON', {
+      ...neonStyle, color: '#00eeff', stroke: '#00eeff',
+      strokeThickness: 16, alpha: 0.18,
+    }).setOrigin(0.5).setAlpha(0.18);
 
-    /* Soft outer glow circle */
-    const halo = this.add.circle(cx, cy, logoSize * 0.62, 0x4400cc, 0.1);
+    const dodgeGlow = this.add.text(cx, dodgeY, 'DODGE', {
+      ...dodgeStyle, color: '#ff22aa', stroke: '#ff22aa',
+      strokeThickness: 14, alpha: 0.18,
+    }).setOrigin(0.5).setAlpha(0.18);
 
-    /* The actual logo image */
-    this.logoImg = this.add.image(cx, cy, 'logo');
-    this.logoImg.setDisplaySize(logoSize, logoSize);
+    /* ── Separator bar between words ── */
+    const bar = this.add.graphics();
+    bar.lineStyle(1, 0x00eeff, 0.35);
+    bar.lineBetween(cx - 70, (neonY + dodgeY) / 2, cx + 70, (neonY + dodgeY) / 2);
 
-    /* Breathing glow on halo */
+    /* ── Main text ── */
+    this.titleNeon  = this.add.text(cx, neonY,  'NEON',  neonStyle).setOrigin(0.5).setAlpha(0);
+    this.titleDodge = this.add.text(cx, dodgeY, 'DODGE', dodgeStyle).setOrigin(0.5).setAlpha(0);
+
+    /* ── Tagline ── */
+    const tag = this.add.text(cx, dodgeY + 38, 'S U R V I V E   T H E   N E O N', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#334455', letterSpacing: 2,
+    }).setOrigin(0.5).setAlpha(0);
+
+    /* ── Entry animations ── */
     this.tweens.add({
-      targets: halo,
-      alpha: { from: 0.07, to: 0.22 },
-      scaleX: 1.12, scaleY: 1.12,
-      duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: this.titleNeon,
+      alpha: 1, y: neonY,
+      duration: 550, ease: 'Back.Out', delay: 60,
+    });
+    this.tweens.add({
+      targets: this.titleDodge,
+      alpha: 1, y: dodgeY,
+      duration: 550, ease: 'Back.Out', delay: 160,
+    });
+    this.tweens.add({
+      targets: tag,
+      alpha: 0.85, duration: 600, delay: 380,
     });
 
-    /* Float bob — logo gently drifts up/down */
+    /* ── Breathing glow pulse ── */
     this.tweens.add({
-      targets: [this.logoImg, halo, this.logoGlow],
-      y: `-=10`,
-      duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: [neonGlow, dodgeGlow],
+      alpha: { from: 0.18, to: 0.38 },
+      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    /* Entry: scale up from 0 + fade in */
-    this.logoImg.setScale(0.4).setAlpha(0);
+    /* ── Float bob (all title elements) ── */
     this.tweens.add({
-      targets: this.logoImg,
-      scaleX: logoSize / this.logoImg.width,
-      scaleY: logoSize / this.logoImg.height,
-      alpha: 1,
-      duration: 600, ease: 'Back.Out', delay: 80,
+      targets: [this.titleNeon, this.titleDodge, neonGlow, dodgeGlow, bar, tag],
+      y: '-=8',
+      duration: 1900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+
+    /* ── Shimmer: periodically tint NEON text white for a flash ── */
+    this.time.addEvent({
+      delay: 2800,
+      loop: true,
+      callback: () => {
+        if (this.glitchActive) return;
+        this.tweens.add({
+          targets: this.titleNeon,
+          alpha: { from: 1, to: 0.6 },
+          duration: 80, yoyo: true, repeat: 1,
+        });
+      },
     });
   }
 
   /* --------------------------------------------------------
-     GLITCH — RGB-split flash on logo
+     GLITCH — RGB-split flash on text
   -------------------------------------------------------- */
   private _fireGlitch() {
     this.glitchActive = true;
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cy = H * 0.225;
-    const logoSize = 210;
+    const neonY  = H * 0.155;
+    const dodgeY = H * 0.265;
 
-    /* 3 offset ghost copies of the logo with additive blend + tint */
-    const tints = [0xff0044, 0x00ffff, 0xffee00];
-    for (let i = 0; i < 3; i++) {
-      const ox = Phaser.Math.Between(-10, 10);
-      const oy = Phaser.Math.Between(-5, 5);
-      const ghost = this.add.image(W / 2 + ox, cy + oy, 'logo')
-        .setDisplaySize(logoSize, logoSize)
-        .setAlpha(0.35)
-        .setTint(tints[i])
-        .setBlendMode(Phaser.BlendModes.ADD);
-      this.glitchObjs.push(ghost);
+    const tints  = ['#ff0044', '#00ffff', '#ffee00'];
+    const labels = ['NEON', 'DODGE'];
+    const yPos   = [neonY, dodgeY];
+    const sizes  = ['62px', '52px'];
+
+    for (let t = 0; t < 3; t++) {
+      for (let l = 0; l < 2; l++) {
+        const ox = Phaser.Math.Between(-9, 9);
+        const oy = Phaser.Math.Between(-4, 4);
+        const gt = this.add.text(W / 2 + ox, yPos[l] + oy, labels[l], {
+          fontSize: sizes[l],
+          fontFamily: '"Arial Black", "Impact", monospace',
+          fontStyle: 'bold',
+          color: tints[t],
+          alpha: 0.28,
+        }).setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD);
+        this.glitchTexts.push(gt);
+      }
     }
 
-    /* Brief horizontal offset on the real logo */
-    const origX = this.logoImg.x;
-    this.logoImg.x = origX + Phaser.Math.Between(-6, 6);
+    /* Briefly shift the real text */
+    const ox1 = Phaser.Math.Between(-5, 5);
+    const origN = this.titleNeon.x;
+    const origD = this.titleDodge.x;
+    this.titleNeon.x  = origN + ox1;
+    this.titleDodge.x = origD - ox1;
 
-    const dur = 70 + Math.random() * 130;
+    const dur = 70 + Math.random() * 110;
     this.time.delayedCall(dur, () => {
-      this.glitchObjs.forEach(g => g.destroy());
-      this.glitchObjs = [];
-      this.logoImg.x = origX;
+      this.glitchTexts.forEach(g => g.destroy());
+      this.glitchTexts = [];
+      this.titleNeon.x  = origN;
+      this.titleDodge.x = origD;
       this.glitchActive = false;
-      this.glitchTimer = 0;
+      this.glitchTimer  = 0;
     });
   }
 
@@ -283,31 +338,20 @@ export class StartScene extends Phaser.Scene {
     const skin = SKINS[this.selectedSkin];
     const cx = W / 2, cy = H * 0.495;
 
-    /* Orbit ring */
-    const ring = this.add.circle(cx, cy, 28, 0x000000, 0)
-      .setStrokeStyle(1, skin.color, 0.14);
-
-    /* Outer glow */
-    const glow = this.add.circle(cx, cy, 22, skin.color, 0.12);
-
-    /* Inner glow */
+    const ring  = this.add.circle(cx, cy, 28, 0x000000, 0).setStrokeStyle(1, skin.color, 0.14);
+    const glow  = this.add.circle(cx, cy, 22, skin.color, 0.12);
     const inner = this.add.circle(cx, cy, 16, skin.color, 0.3);
-
-    /* Crisp dot */
     this.floatingPlayer = this.add.circle(cx, cy, 13, skin.color, 1);
 
-    /* Pulsing glow tween */
     this.tweens.add({
       targets: [glow, inner, ring],
       alpha: { from: glow.alpha, to: glow.alpha * 0.2 },
       scaleX: 1.15, scaleY: 1.15,
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
-
-    /* Float bob */
     this.tweens.add({
       targets: [this.floatingPlayer, glow, inner, ring],
-      y: `-=12`,
+      y: '-=12',
       duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
   }
@@ -326,7 +370,7 @@ export class StartScene extends Phaser.Scene {
       fontSize: '10px', fontFamily: 'monospace', color: '#223344', letterSpacing: 3,
     }).setOrigin(0.5);
 
-    this.skinDots = [];
+    this.skinDots  = [];
     this.skinRings = [];
 
     for (let i = 0; i < total; i++) {
@@ -343,16 +387,10 @@ export class StartScene extends Phaser.Scene {
       this.skinDots.push(dot);
 
       dot.on('pointerover', () => {
-        if (i !== this.selectedSkin) {
-          dot.setRadius(8);
-          dot.setAlpha(0.75);
-        }
+        if (i !== this.selectedSkin) { dot.setRadius(8).setAlpha(0.75); }
       });
       dot.on('pointerout', () => {
-        if (i !== this.selectedSkin) {
-          dot.setRadius(6);
-          dot.setAlpha(0.45);
-        }
+        if (i !== this.selectedSkin) { dot.setRadius(6).setAlpha(0.45); }
       });
       dot.on('pointerdown', () => {
         this.selectedSkin = i;
@@ -386,11 +424,9 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cx = W / 2, cy = H * 0.695;
 
-    /* Outer glow rectangle */
     const glow = this.add.rectangle(cx, cy, 210, 54, 0x00ffff, 0.04)
       .setStrokeStyle(1, 0x00ffff, 0.18);
 
-    /* Inner button */
     const btn = this.add.rectangle(cx, cy, 196, 46, 0x000000, 0)
       .setStrokeStyle(2, 0x00ffff, 0.85)
       .setInteractive({ useHandCursor: true });
@@ -400,7 +436,6 @@ export class StartScene extends Phaser.Scene {
       stroke: '#00ffff', strokeThickness: 1,
     }).setOrigin(0.5);
 
-    /* Breathing pulse on button outline */
     this.tweens.add({
       targets: [glow, btn],
       alpha: { from: 1, to: 0.4 },
@@ -409,8 +444,7 @@ export class StartScene extends Phaser.Scene {
     this.tweens.add({
       targets: label,
       alpha: { from: 1, to: 0.55 },
-      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      delay: 80,
+      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 80,
     });
 
     const _start = () => {
@@ -426,7 +460,6 @@ export class StartScene extends Phaser.Scene {
     btn.on('pointerdown', _start);
     label.setInteractive({ useHandCursor: true }).on('pointerdown', _start);
 
-    /* Also tap anywhere (not on interactive objects) */
     this.input.on('pointerdown', (_ptr: unknown, go: Phaser.GameObjects.GameObject[]) => {
       if (go && go.length > 0) return;
       _start();
@@ -445,16 +478,15 @@ export class StartScene extends Phaser.Scene {
     const maxCombo  = parseInt(localStorage.getItem(STORAGE_MAX_COMBO) || '0', 10);
     const cy = H * 0.80;
 
-    /* Divider */
     const dg = this.add.graphics();
     dg.lineStyle(1, 0x00ffff, 0.07);
     dg.lineBetween(W * 0.12, cy - 20, W * 0.88, cy - 20);
 
-    const col = (x: number, value: string, label: string) => {
+    const col = (x: number, value: string, lbl: string) => {
       this.add.text(x, cy - 8, value, {
         fontSize: '14px', fontFamily: 'monospace', color: '#334d5c',
       }).setOrigin(0.5);
-      this.add.text(x, cy + 10, label, {
+      this.add.text(x, cy + 10, lbl, {
         fontSize: '9px', fontFamily: 'monospace', color: '#1e2e38', letterSpacing: 1,
       }).setOrigin(0.5);
     };
