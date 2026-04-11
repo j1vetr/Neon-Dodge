@@ -493,12 +493,13 @@ export class GameScene extends Phaser.Scene {
       const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
 
       const leftW = gapX;
-      const laserLeft = this.add.rectangle(leftW / 2, y, leftW, LASER_THICKNESS, COLOR_LASER, 0.25);
+      const laserLeft = this.add.rectangle(leftW / 2, y, leftW, LASER_THICKNESS, COLOR_LASER, 0);
       const rightW = W - gapX - gapSize;
       const rightX = gapX + gapSize + rightW / 2;
-      const laserRight = this.add.rectangle(rightX, y, rightW, LASER_THICKNESS, COLOR_LASER, 0.25);
+      const laserRight = this.add.rectangle(rightX, y, rightW, LASER_THICKNESS, COLOR_LASER, 0);
 
-      const born = time + LASER_WARN_DURATION;
+      /* born = time so laser is active immediately when visible on screen */
+      const born = time;
       this.obstacles.push(
         { body: laserLeft,  isLaser: true, born, waveId },
         { body: laserRight, isLaser: true, born, waveId },
@@ -692,13 +693,8 @@ export class GameScene extends Phaser.Scene {
       obs.body.y += speed * dt;
 
       if (obs.isLaser) {
-        const active = obs.born != null && time >= obs.born;
-        if (!active) {
-          const flicker = 0.15 + 0.35 * Math.sin(time * 0.025);
-          obs.body.setFillStyle(0xff4400, flicker);
-        } else {
-          obs.body.setFillStyle(COLOR_LASER, 0.92);
-        }
+        /* Laser is always active (born = spawn time), full opacity */
+        obs.body.setFillStyle(COLOR_LASER, 0.92);
       } else {
         /* Non-laser bars: update colour live every frame */
         obs.body.setFillStyle(liveColor, 1);
