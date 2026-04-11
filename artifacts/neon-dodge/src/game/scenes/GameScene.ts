@@ -354,8 +354,9 @@ export class GameScene extends Phaser.Scene {
 
     /* ------- Score: delta-time accumulation (never freezes, no rewind) ------- */
     const doubleActive = now < this.doubleUntil;
-    /* Base: 10 pts/s × combo multiplier × 2x multiplier */
-    this.score += (dt / 1000) * 10 * this.comboMultiplier * (doubleActive ? 2 : 1);
+    /* Base pts/s rises with level: 15 / 20 / 25 / 30 / 35 */
+    const basePtsPerSec = 15 + this.currentLevel * 5;
+    this.score += (dt / 1000) * basePtsPerSec * this.comboMultiplier * (doubleActive ? 2 : 1);
     const displayNow = Math.floor(this.score);
     if (displayNow !== this.scoreDisplay) {
       this.scoreDisplay = displayNow;
@@ -363,7 +364,7 @@ export class GameScene extends Phaser.Scene {
       /* Score sound every 50 points */
       if (displayNow - this.lastScoreSoundAt >= 50) {
         this.lastScoreSoundAt = displayNow;
-        playScore(1);
+        playScore(this.currentLevel);
       }
     }
 
@@ -719,10 +720,21 @@ export class GameScene extends Phaser.Scene {
           }
         }
 
-        /* Combo: count wave once when first block of that wave passes */
+        /* Combo + pillar bonus: count wave once when first block of that wave passes */
         if (!this.passedWaveIds.has(obs.waveId)) {
           this.passedWaveIds.add(obs.waveId);
           this._incrementCombo();
+
+          /* Pillar pass bonus: 25 × combo mult × 2x if doubleActive */
+          const dbl = this.time.now < this.doubleUntil;
+          const pillarBonus = 25 * this.comboMultiplier * (dbl ? 2 : 1);
+          this.score += pillarBonus;
+          this.scoreDisplay = Math.floor(this.score);
+          this.scoreTxt.setText(`${this.scoreDisplay}`);
+
+          /* Floating "+X" popup in a distinct colour */
+          const popupColor = dbl ? '#ffcc00' : (this.comboMultiplier > 1 ? '#ff8800' : '#00ffcc');
+          this._showPopupText(`+${pillarBonus}`, popupColor);
         }
       }
 
