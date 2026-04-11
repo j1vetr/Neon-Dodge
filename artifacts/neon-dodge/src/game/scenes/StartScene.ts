@@ -155,127 +155,121 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cx = W / 2;
 
-    /*
-      Layout (700px canvas):
-        60px  → top rule / diamond
-        81px  → "N · E · O · N" label
-        116px → "NEON" (mid-weight, cyan)
-        215px → "DODGE" hero (center-of-mass)
-        270px → bottom rule / diamond + tagline
-    */
-    const topRuleY  = H * 0.086;   // 60px
-    const neonLblY  = H * 0.116;   // 81px
-    const neonWordY = H * 0.167;   // 117px
-    const dodgeY    = H * 0.232;   // 162px
-    const botRuleY  = H * 0.290;   // 203px
-    const tagY      = H * 0.318;   // 223px
+    /* ── Vertical anchors ── */
+    const neonY  = H * 0.148;  // "NEON" row
+    const dodgeY = H * 0.242;  // "DODGE" row
+    const tagY   = H * 0.324;  // tagline
 
-    /* ── Decorative Graphics container ── */
-    const g = this.add.graphics();
+    /* ── Thin decorative lines only (no text bounding boxes) ── */
+    const dg = this.add.graphics();
+    dg.lineStyle(1, 0x00eeff, 0.38);
+    dg.lineBetween(cx - 102, neonY - 24, cx - 8, neonY - 24);
+    dg.lineBetween(cx +   8, neonY - 24, cx + 102, neonY - 24);
+    _diamond(dg, cx, neonY - 24, 4, 0x00eeff, 0.7);
+    dg.lineStyle(1, 0xff22aa, 0.35);
+    dg.lineBetween(cx - 122, dodgeY + 52, cx - 8, dodgeY + 52);
+    dg.lineBetween(cx +   8, dodgeY + 52, cx + 122, dodgeY + 52);
+    _diamond(dg, cx, dodgeY + 52, 4, 0xff22aa, 0.6);
 
-    /* Top rule: two lines flanking a diamond */
-    const ruleSpan = 88;
-    g.lineStyle(1, 0x00eeff, 0.45);
-    g.lineBetween(cx - ruleSpan, topRuleY, cx - 7, topRuleY);
-    g.lineBetween(cx + 7,        topRuleY, cx + ruleSpan, topRuleY);
-    _diamond(g, cx, topRuleY, 5, 0x00eeff, 0.75);
+    /* ── Matrix scramble → reveal per character ── */
+    const SCRAMBLE = '!@#&%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const floatAll: Phaser.GameObjects.GameObject[] = [dg];
 
-    /* Corner ticks (tiny vertical dashes at ends of top rule) */
-    g.lineStyle(1, 0x00eeff, 0.3);
-    g.lineBetween(cx - ruleSpan, topRuleY - 4, cx - ruleSpan, topRuleY + 4);
-    g.lineBetween(cx + ruleSpan, topRuleY - 4, cx + ruleSpan, topRuleY + 4);
+    const spawnChar = (
+      ch: string, x: number, y: number,
+      mainColor: string, glowColor: string,
+      mainPx: number, startDelay: number,
+    ): Phaser.GameObjects.Text => {
+      /* Three fill-only layers — NO stroke → zero rectangular bleed */
+      const lg = this.add.text(x, y, ch, {
+        fontSize: `${mainPx + 10}px`, fontFamily: 'monospace', fontStyle: 'bold',
+        color: glowColor,
+      }).setOrigin(0.5).setAlpha(0);
 
-    /* Bottom rule: pink, wider */
-    const botSpan = 108;
-    g.lineStyle(1, 0xff22aa, 0.4);
-    g.lineBetween(cx - botSpan, botRuleY, cx - 7, botRuleY);
-    g.lineBetween(cx + 7,       botRuleY, cx + botSpan, botRuleY);
-    _diamond(g, cx, botRuleY, 5, 0xff22aa, 0.65);
-    g.lineStyle(1, 0xff22aa, 0.25);
-    g.lineBetween(cx - botSpan, botRuleY - 4, cx - botSpan, botRuleY + 4);
-    g.lineBetween(cx + botSpan, botRuleY - 4, cx + botSpan, botRuleY + 4);
+      const lm = this.add.text(x, y, ch, {
+        fontSize: `${mainPx + 4}px`, fontFamily: 'monospace', fontStyle: 'bold',
+        color: glowColor,
+      }).setOrigin(0.5).setAlpha(0);
 
-    /* ── "N · E · O · N" tiny spaced label ── */
-    const neonLbl = this.add.text(cx, neonLblY, 'N  ·  E  ·  O  ·  N', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#00eeff', letterSpacing: 4,
-    }).setOrigin(0.5).setAlpha(0);
+      const lc = this.add.text(x, y, ch, {
+        fontSize: `${mainPx}px`, fontFamily: 'monospace', fontStyle: 'bold',
+        color: mainColor,
+        shadow: { color: glowColor, blur: 16, fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5).setAlpha(0);
 
-    /* ── "NEON" word — cyan, 22px, clean 1px stroke ── */
-    this.titleNeon = this.add.text(cx, neonWordY, 'NEON', {
-      fontSize: '22px',
-      fontFamily: '"Arial Black", "Arial Bold", sans-serif',
-      fontStyle: 'bold',
-      color: '#00eeff',
-      stroke: '#00eeff',
-      strokeThickness: 1,
-      shadow: { color: '#00eeff', blur: 20, fill: true, stroke: true, offsetX: 0, offsetY: 0 },
-    }).setOrigin(0.5).setAlpha(0);
+      /* Scramble then lock */
+      this.time.delayedCall(startDelay, () => {
+        lg.setAlpha(0.08); lm.setAlpha(0.18); lc.setAlpha(1.0);
+        let t = 0;
+        const reps = 6 + Math.floor(Math.random() * 5);
+        const ev = this.time.addEvent({
+          delay: 52, repeat: reps,
+          callback: () => {
+            const rc = SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)];
+            lg.setText(rc); lm.setText(rc); lc.setText(rc);
+            if (++t >= reps) {
+              lg.setText(ch); lm.setText(ch); lc.setText(ch);
+              /* ping flash */
+              this.tweens.add({ targets: lc, alpha: { from: 1, to: 0.7 }, duration: 100, yoyo: true });
+              this.tweens.add({
+                targets: lg, alpha: { from: 0.22, to: 0.07 }, duration: 250,
+                onComplete: () => this.tweens.add({
+                  targets: lg,
+                  alpha: { from: 0.07, to: 0.2 },
+                  duration: 1300 + Math.random() * 500,
+                  yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+                  delay: Math.random() * 500,
+                }),
+              });
+              ev.remove();
+            }
+          },
+        });
+      });
 
-    /* ── "DODGE" hero — three layers, no thick box ── */
-    /* Layer 1: outer glow — NO stroke (avoids boxy halo), just fill at low alpha */
-    const d1 = this.add.text(cx, dodgeY, 'DODGE', {
-      fontSize: '76px',
-      fontFamily: '"Arial Black", "Arial Bold", sans-serif',
-      fontStyle: 'bold',
-      color: '#ff44cc',
-    }).setOrigin(0.5).setAlpha(0.10);
+      floatAll.push(lg, lm, lc);
+      return lc;
+    };
 
-    /* Layer 2: mid glow — no stroke */
-    const d2 = this.add.text(cx, dodgeY, 'DODGE', {
-      fontSize: '73px',
-      fontFamily: '"Arial Black", "Arial Bold", sans-serif',
-      fontStyle: 'bold',
-      color: '#ff22aa',
-    }).setOrigin(0.5).setAlpha(0.22);
+    /* ── NEON letters (28px monospace, spaced) ── */
+    const NEON = ['N', 'E', 'O', 'N'];
+    const nSp = 27, nSt = cx - ((NEON.length - 1) / 2) * nSp;
+    const neonLetters = NEON.map((ch, i) =>
+      spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', '#00eeff', 28, 40 + i * 80));
+    this.titleNeon = neonLetters[neonLetters.length - 1];
 
-    /* Layer 3: main crisp white text, 1px pink stroke */
-    this.titleDodge = this.add.text(cx, dodgeY, 'DODGE', {
-      fontSize: '72px',
-      fontFamily: '"Arial Black", "Arial Bold", sans-serif',
-      fontStyle: 'bold',
-      color: '#ffffff',
-      stroke: '#ff22aa',
-      strokeThickness: 1,
-      shadow: { color: '#ff22aa', blur: 22, fill: true, stroke: true, offsetX: 0, offsetY: 0 },
-    }).setOrigin(0.5).setAlpha(0);
+    /* ── DODGE letters (68px monospace, hero) ── */
+    const DODGE = ['D', 'O', 'D', 'G', 'E'];
+    const dSp = 58, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
+    const dodgeLetters = DODGE.map((ch, i) =>
+      spawnChar(ch, dSt + i * dSp, dodgeY, '#ffffff', '#ff22aa', 68, 280 + i * 75));
+    this.titleDodge = dodgeLetters[dodgeLetters.length - 1];
 
-    /* ── Tagline ── */
+    /* ── Tagline fades in after all letters resolve ── */
     const tag = this.add.text(cx, tagY, 'S U R V I V E   T H E   N E O N', {
       fontSize: '8px', fontFamily: 'monospace', color: '#253340', letterSpacing: 2,
     }).setOrigin(0.5).setAlpha(0);
+    floatAll.push(tag);
+    this.time.delayedCall(1100, () =>
+      this.tweens.add({ targets: tag, alpha: 0.55, duration: 600 }));
 
-    /* ── Entry sequence ── */
-    this.tweens.add({ targets: neonLbl,        alpha: 0.85, duration: 380, delay: 0 });
-    this.tweens.add({ targets: this.titleNeon,  alpha: 1,    duration: 420, ease: 'Power2', delay: 80 });
-    this.tweens.add({ targets: [d1, d2],        alpha: 1,    duration: 500, delay: 140,
-      onComplete: () => { d1.setAlpha(0.12); d2.setAlpha(0.28); } });
-    this.tweens.add({ targets: this.titleDodge, alpha: 1,    duration: 500, ease: 'Power2', delay: 160 });
-    this.tweens.add({ targets: tag,             alpha: 0.65, duration: 500, delay: 300 });
-
-    /* ── Continuous float bob ── */
-    this.tweens.add({
-      targets: [g, neonLbl, this.titleNeon, d1, d2, this.titleDodge, tag],
-      y: '-=7',
-      duration: 2100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    /* ── Float bob starts after all characters have settled ── */
+    this.time.delayedCall(1300, () => {
+      this.tweens.add({
+        targets: floatAll,
+        y: '-=7',
+        duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
     });
 
-    /* ── Glow breathe ── */
-    this.tweens.add({
-      targets: d1,
-      alpha: { from: 0.12, to: 0.26 },
-      duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
-
-    /* ── Flicker shimmer on neonLbl ── */
+    /* ── Periodic neon-label flicker ── */
     this.time.addEvent({
-      delay: 3000, loop: true,
+      delay: 3200, loop: true,
       callback: () => {
         if (this.glitchActive) return;
-        this.tweens.add({
-          targets: neonLbl,
-          alpha: { from: 0.85, to: 0.1 },
-          duration: 55, yoyo: true, repeat: 2,
-        });
+        neonLetters.forEach((lt, i) =>
+          this.time.delayedCall(i * 40, () =>
+            this.tweens.add({ targets: lt, alpha: { from: 1, to: 0.15 }, duration: 50, yoyo: true })));
       },
     });
   }
