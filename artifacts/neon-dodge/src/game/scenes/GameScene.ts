@@ -37,7 +37,7 @@ interface Obstacle {
 
 interface PowerUp {
   body: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Text | Phaser.GameObjects.Image;
+  icon: Phaser.GameObjects.Image;
   ring: Phaser.GameObjects.Arc;
   type: 'shield' | 'double';
   collected: boolean;
@@ -512,9 +512,9 @@ export class GameScene extends Phaser.Scene {
     const color    = colorMap[type];
     const hexColor = '#' + color.toString(16).padStart(6, '0');
 
-    /* Badge dimensions — shield is square to frame the icon */
-    const bw = type === 'shield' ? 44 : 60;
-    const bh = type === 'shield' ? 44 : 26;
+    /* Badge dimensions — both types are square to frame the icon */
+    const bw = 44;
+    const bh = 44;
 
     const x = Phaser.Math.Between(bw / 2 + 10, W - bw / 2 - 10);
     const y = -bh - 10;
@@ -528,20 +528,13 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, color, 1);
     body.setDepth(6);
 
-    /* Icon — PNG for shield, text for double */
-    let icon: Phaser.GameObjects.Text | Phaser.GameObjects.Image;
-    if (type === 'shield') {
-      icon = this.add.image(x, y, 'icon-shield')
-        .setDisplaySize(30, 30)
-        .setTint(color)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(7);
-    } else {
-      icon = this.add.text(x, y, '×2 PTS', {
-        fontSize: '13px', fontFamily: 'monospace',
-        color: hexColor, fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(7);
-    }
+    /* Icon — PNG for both types, ADD blend makes black transparent, tint colours it */
+    const iconKey = type === 'shield' ? 'icon-shield' : 'icon-double';
+    const icon = this.add.image(x, y, iconKey)
+      .setDisplaySize(30, 30)
+      .setTint(color)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(7);
 
     /* Pulsing ring tween */
     this.tweens.add({
@@ -550,12 +543,10 @@ export class GameScene extends Phaser.Scene {
       duration: 800, repeat: -1, ease: 'Sine.easeOut',
     });
 
-    /* Gentle float tween on badge — icon excluded when it's an image
-       because absolute scaleX would override setDisplaySize */
-    const floatTargets: Phaser.GameObjects.GameObject[] = [body];
-    if (type !== 'shield') floatTargets.push(icon);
+    /* Gentle float tween on badge only — icon excluded because absolute
+       scaleX would override setDisplaySize on the 1024×1024 source PNG */
     this.tweens.add({
-      targets: floatTargets,
+      targets: body,
       scaleX: 1.06, scaleY: 1.06,
       duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });

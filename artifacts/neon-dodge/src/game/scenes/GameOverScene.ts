@@ -215,8 +215,7 @@ export class GameOverScene extends Phaser.Scene {
         fontSize: size, fontFamily: 'monospace',
         color: i === 0 ? color : '#000000',
         stroke, strokeThickness: i * 3,
-        alpha: i === 0 ? 1 : 0.18,
-      }).setOrigin(0.5);
+      }).setOrigin(0.5).setAlpha(i === 0 ? 1 : 0.18);
     }
   }
 

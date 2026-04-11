@@ -10,6 +10,7 @@ export class PreloadScene extends Phaser.Scene {
 
   preload() {
     this.load.image('icon-shield', '/assets/shield.png');
+    this.load.image('icon-double', '/assets/double.png');
   }
 
   create() {
