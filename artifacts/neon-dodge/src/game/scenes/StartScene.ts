@@ -33,8 +33,14 @@ export class StartScene extends Phaser.Scene {
   private floatingPlayerCY = 0;
   private playerTrail: Phaser.GameObjects.Arc[] = [];
   private playerTrailTimer = 0;
-  private skinDots: Phaser.GameObjects.Arc[] = [];
-  private skinRings: Phaser.GameObjects.Arc[] = [];
+
+  /* Skin selector */
+  private skinGfx!: Phaser.GameObjects.Graphics;
+  private skinNameLabels: Phaser.GameObjects.Text[] = [];
+  private readonly _stileSize = 36;
+  private readonly _stileSpacing = 54;
+  private _stileY = 0;
+  private _stileX0 = 0;
 
   /* Title refs for glitch */
   private glitchTimer  = 0;
@@ -335,7 +341,7 @@ export class StartScene extends Phaser.Scene {
   private _buildFloatingPlayer() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const skin = SKINS[this.selectedSkin];
-    const cx = W / 2, cy = H * 0.495;
+    const cx = W / 2, cy = H * 0.425;
     this.floatingPlayerCX = cx;
     this.floatingPlayerCY = cy;
 
@@ -360,66 +366,106 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     SKIN DOT SELECTOR
+     SKIN / COLOR SELECTOR  — awwwards redesign
   -------------------------------------------------------- */
   private _buildSkinSelector() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cy = H * 0.578;
-    const spacing = 56;
+    const S   = this._stileSize;      // tile size px
+    const sp  = this._stileSpacing;   // tile spacing px
+    const cy  = H * 0.565;            // tile center Y
     const total = SKINS.length;
-    const startX = W / 2 - ((total - 1) / 2) * spacing;
+    const startX = W / 2 - ((total - 1) / 2) * sp;
 
-    /* Label — larger and much more visible */
-    this.add.text(W / 2, cy - 34, t().selectSkin, {
-      fontSize: '13px', fontFamily: 'monospace',
-      color: '#aabbcc', letterSpacing: 3,
-      stroke: '#003344', strokeThickness: 1,
+    this._stileY  = cy;
+    this._stileX0 = startX;
+
+    /* ── Section header with side lines ── */
+    const headerY = cy - S / 2 - 30;
+    const hg = this.add.graphics();
+    hg.lineStyle(1, 0x00ffff, 0.14);
+    hg.lineBetween(22, headerY, W / 2 - 54, headerY);
+    hg.lineBetween(W / 2 + 54, headerY, W - 22, headerY);
+    this.add.text(W / 2, headerY, t().selectSkin, {
+      fontSize: '11px', fontFamily: 'monospace',
+      color: '#4d8899', letterSpacing: 4,
     }).setOrigin(0.5);
 
-    this.skinDots  = [];
-    this.skinRings = [];
+    /* ── Graphics object for tile renders ── */
+    this.skinGfx = this.add.graphics();
+    this.skinNameLabels = [];
 
     for (let i = 0; i < total; i++) {
-      const x = startX + i * spacing;
-      const isSelected = i === this.selectedSkin;
-      const col = SKINS[i].color;
-      const hex = SKINS[i].hex;
+      const x = startX + i * sp;
+      const isSel = i === this.selectedSkin;
 
-      /* Outer glow ring */
-      const ring = this.add.circle(x, cy, isSelected ? 18 : 14, 0x000000, 0)
-        .setStrokeStyle(isSelected ? 2.5 : 1, col, isSelected ? 1 : 0.3);
-      this.skinRings.push(ring);
+      /* Name label */
+      const lbl = this.add.text(x, cy + S / 2 + 14, t().skinNames[i], {
+        fontSize: '10px', fontFamily: 'monospace',
+        color: isSel ? SKINS[i].hex : '#2d4050',
+      }).setOrigin(0.5);
+      this.skinNameLabels.push(lbl);
 
-      /* Colour dot — bigger, clickable */
-      const dot = this.add.circle(x, cy, isSelected ? 13 : 9, col, isSelected ? 1 : 0.5)
+      /* Invisible hit area (covers tile + label) */
+      const hit = this.add.rectangle(x, cy + 10, S + 16, S + 38, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-      this.skinDots.push(dot);
 
-      /* Skin name label below dot */
-      this.add.text(x, cy + 26, SKINS[i].name.toUpperCase(), {
-        fontSize: '9px', fontFamily: 'monospace',
-        color: isSelected ? hex : '#334455',
-        stroke: isSelected ? hex : 'transparent',
-        strokeThickness: 0.5,
-      }).setOrigin(0.5).setName(`skinlabel_${i}`);
-
-      dot.on('pointerover', () => { if (i !== this.selectedSkin) dot.setRadius(11).setAlpha(0.78); });
-      dot.on('pointerout',  () => { if (i !== this.selectedSkin) dot.setRadius(9).setAlpha(0.50); });
-      dot.on('pointerdown', () => {
+      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.04); });
+      hit.on('pointerout',  () => hit.setFillStyle(0xffffff, 0));
+      hit.on('pointerdown', () => {
         this.selectedSkin = i;
         this._refreshSkinDots();
         this._updateFloatingPlayerColor();
       });
     }
+
+    this._drawSkinTiles();
+  }
+
+  private _drawSkinTiles() {
+    const g = this.skinGfx;
+    g.clear();
+    const startX = this._stileX0;
+    const cy     = this._stileY;
+    const S      = this._stileSize;
+    const sp     = this._stileSpacing;
+    const radius = 7;
+
+    for (let i = 0; i < SKINS.length; i++) {
+      const x   = startX + i * sp;
+      const col = SKINS[i].color;
+      const sel = i === this.selectedSkin;
+      const half = S / 2;
+
+      if (sel) {
+        /* Soft outer glow — three layers */
+        g.lineStyle(10, col, 0.05);
+        g.strokeRoundedRect(x - half - 9, cy - half - 9, S + 18, S + 18, radius + 6);
+        g.lineStyle(5, col, 0.12);
+        g.strokeRoundedRect(x - half - 5, cy - half - 5, S + 10, S + 10, radius + 3);
+        g.lineStyle(2, col, 0.4);
+        g.strokeRoundedRect(x - half - 2, cy - half - 2, S + 4,  S + 4,  radius + 1);
+        /* Tile fill — full brightness */
+        g.fillStyle(col, 1);
+        g.fillRoundedRect(x - half, cy - half, S, S, radius);
+        /* Inner bright border for depth */
+        g.lineStyle(1.5, 0xffffff, 0.55);
+        g.strokeRoundedRect(x - half + 2, cy - half + 2, S - 4, S - 4, radius - 2);
+      } else {
+        /* Dim tile */
+        g.fillStyle(col, 0.18);
+        g.fillRoundedRect(x - half, cy - half, S, S, radius);
+        g.lineStyle(1, col, 0.32);
+        g.strokeRoundedRect(x - half, cy - half, S, S, radius);
+      }
+    }
   }
 
   private _refreshSkinDots() {
+    this._drawSkinTiles();
     for (let i = 0; i < SKINS.length; i++) {
-      const col = SKINS[i].color;
-      const isSel = i === this.selectedSkin;
-      this.skinDots[i].setRadius(isSel ? 13 : 9).setAlpha(isSel ? 1 : 0.50);
-      this.skinRings[i].setRadius(isSel ? 18 : 14)
-        .setStrokeStyle(isSel ? 2.5 : 1, col, isSel ? 1 : 0.3);
+      this.skinNameLabels[i].setColor(
+        i === this.selectedSkin ? SKINS[i].hex : '#2d4050'
+      );
     }
   }
 
@@ -434,7 +480,7 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _buildPlayButton() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cx = W / 2, cy = H * 0.695;
+    const cx = W / 2, cy = H * 0.718;
 
     const glow = this.add.rectangle(cx, cy, 210, 54, 0x00ffff, 0.04)
       .setStrokeStyle(1, 0x00ffff, 0.18);
@@ -477,7 +523,7 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _buildLangSelector() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cy = H * 0.775;
+    const cy = H * 0.81;
     const lang = getLang();
     const FLAG_SIZE = 26;
     const gap = 20;
@@ -530,7 +576,7 @@ export class StartScene extends Phaser.Scene {
 
     const totalTime = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0');
     const maxCombo  = parseInt(localStorage.getItem(STORAGE_MAX_COMBO)    || '0', 10);
-    const cy = H * 0.865;
+    const cy = H * 0.878;
 
     const dg = this.add.graphics();
     dg.lineStyle(1, 0x00ffff, 0.07);
