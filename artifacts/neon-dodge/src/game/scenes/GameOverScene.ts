@@ -62,7 +62,15 @@ export class GameOverScene extends Phaser.Scene {
     this._divider(128);
 
     /* ---- Score block ---- */
-    this._glowText(W / 2, 158, `${this.score}`, '56px', '#ffffff', '#00ffff');
+    this.add.text(W / 2, 158, `${this.score}`, {
+      fontSize: '56px',
+      fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold',
+      color: '#050510',
+      stroke: '#00ffff',
+      strokeThickness: 2,
+      shadow: { color: '#00ffff', blur: 12, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
+    }).setOrigin(0.5);
     this.add.text(W / 2, 196, 'SCORE', {
       fontSize: '11px', fontFamily: 'monospace', color: '#334455', letterSpacing: 3,
     }).setOrigin(0.5);
