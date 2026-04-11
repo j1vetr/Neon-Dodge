@@ -2,21 +2,23 @@
 /* =========================================================
    GAME SCENE
    Core gameplay: auto-upward scroll, tap to switch direction,
-   obstacles, lasers, slow-motion, particles, screen shake.
+   obstacles, lasers, level system, particles, screen shake.
+
+   CHANGE LOG:
+   - Slow-motion REMOVED entirely — game speed never changes mid-play
+   - Level system added: every LEVEL_DURATION seconds → new level
+     Each level has its own speed, spawn rate, gap size, wall colour
    ========================================================= */
 
 import Phaser from 'phaser';
 import {
   GAME_WIDTH, GAME_HEIGHT,
   PLAYER_SIZE, PLAYER_HORIZONTAL_SPEED, PLAYER_START_X, PLAYER_START_Y,
-  BASE_SCROLL_SPEED, SCROLL_SPEED_INCREMENT, MAX_SCROLL_SPEED,
-  OBSTACLE_SPAWN_INTERVAL_MS, OBSTACLE_SPAWN_MIN_MS,
-  OBSTACLE_THICKNESS, GAP_MIN, GAP_MAX,
-  LASER_THICKNESS, LASER_WARN_DURATION,
+  LEVELS, LEVEL_DURATION, LevelDef,
+  OBSTACLE_THICKNESS, LASER_THICKNESS, LASER_WARN_DURATION, LASER_STARTS_AT_LEVEL,
   TRAIL_PARTICLE_LIFETIME, TRAIL_EMIT_INTERVAL,
-  SLOWMO_PROXIMITY, SLOWMO_TIMESCALE,
   SHAKE_DURATION, SHAKE_INTENSITY,
-  COLOR_BG, COLOR_WALL, COLOR_LASER,
+  COLOR_BG, COLOR_LASER,
   SKINS, STORAGE_HIGHSCORE,
 } from '../constants';
 import { playTap, playHit, playScore, playLaserWarn } from '../audio';
@@ -25,8 +27,7 @@ import { playTap, playHit, playScore, playLaserWarn } from '../audio';
 interface Obstacle {
   body: Phaser.GameObjects.Rectangle;
   isLaser: boolean;
-  warned?: boolean;
-  born?: number; // time laser body becomes active
+  born?: number; // real timestamp when laser becomes lethal
 }
 
 interface TrailParticle {
@@ -40,43 +41,34 @@ export class GameScene extends Phaser.Scene {
   private player!: Phaser.GameObjects.Arc;
   private playerGlow!: Phaser.GameObjects.Arc;
   private playerColor!: number;
-  private playerHex!: string;
-  private dirX = 1; // 1 = right, -1 = left
+  private dirX = 1;
   private playerVX = 0;
-
-  /* Scrolling */
-  private scrollSpeed = BASE_SCROLL_SPEED;
-  private elapsedTime = 0;
-  private lastSpeedUpdate = 0;
 
   /* Obstacles */
   private obstacles: Obstacle[] = [];
   private spawnTimer = 0;
-  private spawnInterval = OBSTACLE_SPAWN_INTERVAL_MS;
 
   /* Trail */
   private trailParticles: TrailParticle[] = [];
   private lastTrailTime = 0;
 
-  /* Score */
+  /* Score / time */
   private score = 0;
-  private lastScoreChime = 0;
+  private elapsedTime = 0;
   private scoreTxt!: Phaser.GameObjects.Text;
-  private bestTxt!: Phaser.GameObjects.Text;
   private highScore = 0;
+
+  /* Level system */
+  private currentLevel = 0;        // index into LEVELS[]
+  private levelDef!: LevelDef;     // current level config
+  private levelTxt!: Phaser.GameObjects.Text;
+  private levelBannerContainer!: Phaser.GameObjects.Container;
 
   /* State */
   private alive = true;
-  private slowMo = false;
 
-  /* Graphics layer for obstacles */
-  private obstacleGraphics!: Phaser.GameObjects.Graphics;
-
-  /* Input guard */
+  /* Input debounce */
   private lastTapTime = 0;
-
-  /* Tween for slow-mo visual */
-  private slowTween?: Phaser.Tweens.Tween;
 
   /* Skin */
   private skinIndex = 0;
@@ -86,46 +78,51 @@ export class GameScene extends Phaser.Scene {
   init(data: { skin?: number }) {
     this.skinIndex = data?.skin ?? 0;
     this.playerColor = SKINS[this.skinIndex].color;
-    this.playerHex = SKINS[this.skinIndex].hex;
   }
 
+  /* --------------------------------------------------------
+     CREATE
+  -------------------------------------------------------- */
   create() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
 
     /* Background */
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
-
-    /* Star field (static) */
     this._createStars();
-
-    /* Scrolling grid lines */
     this._createGrid();
 
-    /* Obstacle graphics */
-    this.obstacleGraphics = this.add.graphics();
+    /* Side walls */
+    this._drawSideWalls();
 
-    /* Player glow ring */
+    /* Player glow ring (behind player) */
     this.playerGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 10, this.playerColor, 0.12);
+    this.playerGlow.setDepth(9);
 
     /* Player */
     this.player = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE, this.playerColor, 1);
     this.player.setDepth(10);
-    this.playerGlow.setDepth(9);
 
-    /* Score text */
+    /* HUD — score (center top) */
     this.scoreTxt = this.add.text(W / 2, 28, '0s', {
-      fontSize: '26px', fontFamily: 'monospace', color: '#ffffff',
+      fontSize: '24px', fontFamily: 'monospace', color: '#ffffff',
       stroke: '#00ffff', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(20);
 
-    /* High score */
+    /* HUD — best (top right) */
     this.highScore = parseInt(localStorage.getItem(STORAGE_HIGHSCORE) || '0', 10);
-    this.bestTxt = this.add.text(W - 12, 14, `Best: ${this.highScore}s`, {
-      fontSize: '13px', fontFamily: 'monospace', color: '#556677',
+    this.add.text(W - 12, 14, `Best: ${this.highScore}s`, {
+      fontSize: '12px', fontFamily: 'monospace', color: '#334455',
     }).setOrigin(1, 0).setDepth(20);
 
-    /* Side walls always visible */
-    this._drawSideWalls();
+    /* HUD — level (top left) */
+    this.levelTxt = this.add.text(12, 14, 'LVL 1', {
+      fontSize: '13px', fontFamily: 'monospace', color: '#ff2060',
+    }).setOrigin(0, 0).setDepth(20);
+
+    /* Level-up banner container (initially hidden) */
+    this.levelBannerContainer = this.add.container(W / 2, H / 2);
+    this.levelBannerContainer.setDepth(30);
+    this.levelBannerContainer.setAlpha(0);
 
     /* Input */
     this.input.on('pointerdown', this._onTap, this);
@@ -135,14 +132,16 @@ export class GameScene extends Phaser.Scene {
     this.alive = true;
     this.score = 0;
     this.elapsedTime = 0;
-    this.scrollSpeed = BASE_SCROLL_SPEED;
-    this.spawnInterval = OBSTACLE_SPAWN_INTERVAL_MS;
     this.spawnTimer = 0;
     this.obstacles = [];
     this.trailParticles = [];
     this.dirX = 1;
-    this.playerVX = PLAYER_HORIZONTAL_SPEED;
-    this.slowMo = false;
+    this.currentLevel = 0;
+    this.levelDef = LEVELS[0];
+    this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult;
+
+    /* Update level label colour */
+    this._updateLevelLabel();
   }
 
   /* --------------------------------------------------------
@@ -151,18 +150,18 @@ export class GameScene extends Phaser.Scene {
   private _onTap() {
     if (!this.alive) return;
     const now = this.time.now;
-    if (now - this.lastTapTime < 100) return; // debounce
+    if (now - this.lastTapTime < 80) return;
     this.lastTapTime = now;
 
     this.dirX *= -1;
-    this.playerVX = PLAYER_HORIZONTAL_SPEED * this.dirX;
+    this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult * this.dirX;
     playTap();
 
-    /* Flash player on tap */
+    /* Quick scale flash */
     this.tweens.add({
       targets: this.player,
-      scaleX: 1.4, scaleY: 1.4,
-      duration: 80, yoyo: true,
+      scaleX: 1.35, scaleY: 1.35,
+      duration: 70, yoyo: true,
     });
   }
 
@@ -172,23 +171,21 @@ export class GameScene extends Phaser.Scene {
   update(time: number, delta: number) {
     if (!this.alive) return;
 
-    const dt = delta / 1000; // seconds
-
-    /* Increase speed over time */
+    const dt = delta / 1000;
     this.elapsedTime += dt;
-    if (this.elapsedTime - this.lastSpeedUpdate > 1) {
-      this.scrollSpeed = Math.min(
-        BASE_SCROLL_SPEED + this.elapsedTime * SCROLL_SPEED_INCREMENT,
-        MAX_SCROLL_SPEED,
-      );
-      this.spawnInterval = Math.max(
-        OBSTACLE_SPAWN_INTERVAL_MS - this.elapsedTime * 15,
-        OBSTACLE_SPAWN_MIN_MS,
-      );
-      this.lastSpeedUpdate = this.elapsedTime;
+
+    /* ------- Level progression ------- */
+    const targetLevel = Math.min(
+      Math.floor(this.elapsedTime / LEVEL_DURATION),
+      LEVELS.length - 1,
+    );
+    if (targetLevel > this.currentLevel) {
+      this.currentLevel = targetLevel;
+      this.levelDef = LEVELS[this.currentLevel];
+      this._onLevelUp();
     }
 
-    /* Score (whole seconds) */
+    /* ------- Score display (whole seconds) ------- */
     const newScore = Math.floor(this.elapsedTime);
     if (newScore > this.score) {
       this.score = newScore;
@@ -196,91 +193,140 @@ export class GameScene extends Phaser.Scene {
       if (this.score % 5 === 0) playScore(this.score / 5);
     }
 
-    /* Move player horizontally */
+    /* ------- Player horizontal movement ------- */
     const px = this.player.x + this.playerVX * dt;
     const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 2, GAME_WIDTH - PLAYER_SIZE - 2);
     if (px !== clamped) {
-      /* Bounce off side wall */
       this.dirX *= -1;
-      this.playerVX = PLAYER_HORIZONTAL_SPEED * this.dirX;
+      this.playerVX = PLAYER_HORIZONTAL_SPEED * this.levelDef.playerSpeedMult * this.dirX;
     }
     this.player.x = clamped;
     this.playerGlow.x = clamped;
     this.playerGlow.y = this.player.y;
 
-    /* Spawn obstacles */
+    /* ------- Spawn obstacles ------- */
     this.spawnTimer += delta;
-    if (this.spawnTimer >= this.spawnInterval) {
+    if (this.spawnTimer >= this.levelDef.spawnMs) {
       this.spawnTimer = 0;
       this._spawnObstacle(time);
     }
 
-    /* Check proximity for slow-mo */
-    const minDist = this._getMinObstacleDistance();
-    const targetScale = minDist < SLOWMO_PROXIMITY ? SLOWMO_TIMESCALE : 1;
-    if (targetScale < 1 && !this.slowMo) {
-      this.slowMo = true;
-      this.time.timeScale = SLOWMO_TIMESCALE;
-      this.tweens.timeScale = SLOWMO_TIMESCALE;
-      /* Tint camera slightly blue */
-      this.cameras.main.setBackgroundColor(0x000511);
-    } else if (targetScale === 1 && this.slowMo) {
-      this.slowMo = false;
-      this.time.timeScale = 1;
-      this.tweens.timeScale = 1;
-      this.cameras.main.setBackgroundColor(COLOR_BG);
-    }
-
-    /* Move & update obstacles */
+    /* ------- Move obstacles ------- */
     this._updateObstacles(dt, time);
 
-    /* Collision detection */
+    /* ------- Collision ------- */
     if (this._checkCollision()) {
       this._onDeath();
       return;
     }
 
-    /* Trail */
+    /* ------- Trail ------- */
     if (time - this.lastTrailTime > TRAIL_EMIT_INTERVAL) {
       this.lastTrailTime = time;
       this._emitTrail(time);
     }
     this._updateTrail(time);
 
-    /* Glow pulse */
+    /* ------- Glow pulse ------- */
     this.playerGlow.setRadius(PLAYER_SIZE + 8 + Math.sin(time * 0.005) * 4);
   }
 
   /* --------------------------------------------------------
-     OBSTACLE SPAWNING
+     LEVEL UP
+  -------------------------------------------------------- */
+  private _onLevelUp() {
+    /* Update HUD label */
+    this._updateLevelLabel();
+
+    /* Sound: two rising tones */
+    playScore(this.currentLevel);
+
+    /* Flash the camera briefly */
+    this.cameras.main.flash(280, 10, 10, 10);
+
+    /* "LEVEL X" banner animation */
+    const W = GAME_WIDTH;
+    const def = this.levelDef;
+    const hexColor = '#' + def.wallColor.toString(16).padStart(6, '0');
+
+    /* Clear previous banner children */
+    this.levelBannerContainer.removeAll(true);
+    this.levelBannerContainer.setAlpha(0);
+    this.levelBannerContainer.setPosition(W / 2, GAME_HEIGHT * 0.42);
+
+    /* Background pill */
+    const pill = this.add.rectangle(0, 0, 240, 52, 0x000000, 0.7);
+    pill.setStrokeStyle(2, def.wallColor, 1);
+    this.levelBannerContainer.add(pill);
+
+    /* Level label */
+    const txt = this.add.text(0, -10, def.label, {
+      fontSize: '22px', fontFamily: 'monospace',
+      color: hexColor, stroke: hexColor, strokeThickness: 1,
+    }).setOrigin(0.5);
+    this.levelBannerContainer.add(txt);
+
+    /* Speed sub-label */
+    const sub = this.add.text(0, 14, `SPEED ×${def.playerSpeedMult.toFixed(2)}`, {
+      fontSize: '11px', fontFamily: 'monospace', color: '#667788',
+    }).setOrigin(0.5);
+    this.levelBannerContainer.add(sub);
+
+    /* Fade-in → hold → fade-out */
+    this.tweens.add({
+      targets: this.levelBannerContainer,
+      alpha: 1,
+      duration: 200,
+      ease: 'Power2',
+      onComplete: () => {
+        this.time.delayedCall(900, () => {
+          this.tweens.add({
+            targets: this.levelBannerContainer,
+            alpha: 0,
+            duration: 300,
+          });
+        });
+      },
+    });
+  }
+
+  private _updateLevelLabel() {
+    const def = this.levelDef;
+    const hexColor = '#' + def.wallColor.toString(16).padStart(6, '0');
+    this.levelTxt.setText(`LVL ${this.currentLevel + 1}`);
+    this.levelTxt.setStyle({ color: hexColor });
+  }
+
+  /* --------------------------------------------------------
+     OBSTACLE SPAWNING — uses current level's config
   -------------------------------------------------------- */
   private _spawnObstacle(time: number) {
     const W = GAME_WIDTH;
-    const roll = Math.random();
-    const isLaser = this.elapsedTime > 8 && roll > 0.65;
+    const def = this.levelDef;
+
+    /* Lasers only appear from LASER_STARTS_AT_LEVEL onwards */
+    const lasersUnlocked = this.currentLevel >= LASER_STARTS_AT_LEVEL - 1;
+    const isLaser = lasersUnlocked && Math.random() > 0.70;
     const y = -20;
 
     if (isLaser) {
-      // Horizontal laser — warn first, activate after warn duration
       const laserGfx = this.add.rectangle(W / 2, y, W - 4, LASER_THICKNESS, COLOR_LASER, 0.25);
-      this.obstacles.push({ body: laserGfx, isLaser: true, warned: false, born: time + LASER_WARN_DURATION });
+      this.obstacles.push({ body: laserGfx, isLaser: true, born: time + LASER_WARN_DURATION });
       playLaserWarn();
     } else {
-      // Wall with gap
-      const gapSize = Phaser.Math.Between(GAP_MIN, GAP_MAX);
+      /* Use current level's gap range */
+      const gapSize = Phaser.Math.Between(def.gapMin, def.gapMax);
       const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
 
-      // Left wall segment
       const leftW = gapX;
       const leftX = leftW / 2;
-      const left = this.add.rectangle(leftX, y, leftW, OBSTACLE_THICKNESS, COLOR_WALL, 1);
-      left.setStrokeStyle(1, 0xff6688, 0.6);
+      const left = this.add.rectangle(leftX, y, leftW, OBSTACLE_THICKNESS, def.wallColor, 1);
+      left.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
 
-      // Right wall segment
       const rightW = W - gapX - gapSize;
       const rightX = gapX + gapSize + rightW / 2;
-      const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, COLOR_WALL, 1);
-      right.setStrokeStyle(1, 0xff6688, 0.6);
+      const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, def.wallColor, 1);
+      right.setStrokeStyle(1, Phaser.Display.Color.IntegerToColor(def.wallColor).lighten(20).color, 0.5);
 
       this.obstacles.push(
         { body: left, isLaser: false },
@@ -289,8 +335,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /* --------------------------------------------------------
+     OBSTACLE UPDATE — speed from current level def
+  -------------------------------------------------------- */
   private _updateObstacles(dt: number, time: number) {
-    const speed = this.slowMo ? this.scrollSpeed * SLOWMO_TIMESCALE : this.scrollSpeed;
+    const speed = this.levelDef.scrollSpeed;
     const toRemove: number[] = [];
 
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
@@ -298,13 +347,13 @@ export class GameScene extends Phaser.Scene {
       obs.body.y += speed * dt;
 
       if (obs.isLaser) {
-        // Warn: flickering opacity before it activates
-        const active = obs.born && time >= obs.born;
+        const active = obs.born != null && time >= obs.born;
         if (!active) {
-          obs.body.fillAlpha = 0.15 + 0.35 * Math.sin(time * 0.02);
-          obs.body.setFillStyle(0xff4400, obs.body.fillAlpha);
+          /* Flickering warning colour — orange tint */
+          const flicker = 0.15 + 0.35 * Math.sin(time * 0.025);
+          obs.body.setFillStyle(0xff4400, flicker);
         } else {
-          obs.body.setFillStyle(COLOR_LASER, 0.9);
+          obs.body.setFillStyle(COLOR_LASER, 0.92);
           obs.body.setDisplaySize(GAME_WIDTH - 4, LASER_THICKNESS);
         }
       }
@@ -324,11 +373,10 @@ export class GameScene extends Phaser.Scene {
     const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75;
 
     for (const obs of this.obstacles) {
-      if (obs.isLaser && obs.born && this.time.now < obs.born) continue; // not active yet
+      if (obs.isLaser && obs.born != null && this.time.now < obs.born) continue;
 
       const bx = obs.body.x, by = obs.body.y;
       const hw = obs.body.displayWidth / 2, hh = obs.body.displayHeight / 2;
-
       const nearX = Phaser.Math.Clamp(px, bx - hw, bx + hw);
       const nearY = Phaser.Math.Clamp(py, by - hh, by + hh);
       const dx = px - nearX, dy = py - nearY;
@@ -337,27 +385,11 @@ export class GameScene extends Phaser.Scene {
     return false;
   }
 
-  private _getMinObstacleDistance(): number {
-    let min = Infinity;
-    const px = this.player.x, py = this.player.y;
-    for (const obs of this.obstacles) {
-      const bx = obs.body.x, by = obs.body.y;
-      const hw = obs.body.displayWidth / 2, hh = obs.body.displayHeight / 2;
-      const nearX = Phaser.Math.Clamp(px, bx - hw, bx + hw);
-      const nearY = Phaser.Math.Clamp(py, by - hh, by + hh);
-      const d = Math.hypot(px - nearX, py - nearY);
-      if (d < min) min = d;
-    }
-    return min;
-  }
-
   /* --------------------------------------------------------
      DEATH
   -------------------------------------------------------- */
   private _onDeath() {
     this.alive = false;
-    this.time.timeScale = 1;
-    this.tweens.timeScale = 1;
 
     playHit();
     this.cameras.main.shake(SHAKE_DURATION, SHAKE_INTENSITY);
@@ -368,34 +400,37 @@ export class GameScene extends Phaser.Scene {
       localStorage.setItem(STORAGE_HIGHSCORE, String(this.highScore));
     }
 
-    /* Flash player red */
+    /* Shrink & fade player */
     this.tweens.add({
       targets: this.player,
-      scaleX: 0, scaleY: 0,
-      alpha: 0,
+      scaleX: 0, scaleY: 0, alpha: 0,
       duration: 400,
     });
 
-    /* Burst of particles */
-    for (let i = 0; i < 20; i++) {
-      const angle = (i / 20) * Math.PI * 2;
-      const speed = Phaser.Math.Between(60, 200);
+    /* Explosion particles */
+    for (let i = 0; i < 22; i++) {
+      const angle = (i / 22) * Math.PI * 2;
+      const speed = Phaser.Math.Between(60, 220);
       const px = this.player.x, py = this.player.y;
       const dot = this.add.circle(px, py, Phaser.Math.Between(2, 5), this.playerColor, 1);
       this.tweens.add({
         targets: dot,
         x: px + Math.cos(angle) * speed,
         y: py + Math.sin(angle) * speed,
-        alpha: 0,
-        scaleX: 0.1, scaleY: 0.1,
-        duration: Phaser.Math.Between(300, 600),
+        alpha: 0, scaleX: 0.1, scaleY: 0.1,
+        duration: Phaser.Math.Between(300, 650),
         ease: 'Power2',
         onComplete: () => dot.destroy(),
       });
     }
 
     this.time.delayedCall(900, () => {
-      this.scene.start('GameOverScene', { score: this.score, best: this.highScore, skin: this.skinIndex });
+      this.scene.start('GameOverScene', {
+        score: this.score,
+        best: this.highScore,
+        skin: this.skinIndex,
+        level: this.currentLevel + 1,
+      });
     });
   }
 
@@ -449,10 +484,8 @@ export class GameScene extends Phaser.Scene {
 
   private _drawSideWalls() {
     const g = this.add.graphics();
-    /* Left border */
     g.fillStyle(0xff2060, 0.6);
     g.fillRect(0, 0, 2, GAME_HEIGHT);
-    /* Right border */
     g.fillRect(GAME_WIDTH - 2, 0, 2, GAME_HEIGHT);
   }
 }

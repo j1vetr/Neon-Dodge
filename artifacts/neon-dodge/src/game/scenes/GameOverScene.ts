@@ -14,13 +14,15 @@ export class GameOverScene extends Phaser.Scene {
   private score = 0;
   private best = 0;
   private skinIndex = 0;
+  private levelReached = 1;
 
   constructor() { super({ key: 'GameOverScene' }); }
 
-  init(data: { score: number; best: number; skin: number }) {
+  init(data: { score: number; best: number; skin: number; level?: number }) {
     this.score = data.score ?? 0;
     this.best = data.best ?? 0;
     this.skinIndex = data.skin ?? 0;
+    this.levelReached = data.level ?? 1;
   }
 
   create() {
@@ -58,10 +60,17 @@ export class GameOverScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
+    /* Level reached badge */
+    const lvlColor = '#00ffcc';
+    this.add.text(W / 2, H * 0.555, `LEVEL ${this.levelReached} REACHED`, {
+      fontSize: '14px', fontFamily: 'monospace', color: lvlColor,
+      stroke: lvlColor, strokeThickness: 1,
+    }).setOrigin(0.5);
+
     /* Player colour preview */
     const skin = SKINS[this.skinIndex];
-    this.add.circle(W / 2, H * 0.57, 14, skin.color, 0.9);
-    this.add.circle(W / 2, H * 0.57, 22, skin.color, 0.12);
+    this.add.circle(W / 2, H * 0.615, 12, skin.color, 0.9);
+    this.add.circle(W / 2, H * 0.615, 20, skin.color, 0.12);
 
     /* Watch Ad placeholder */
     this._makeButton(
