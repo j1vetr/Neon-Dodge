@@ -1,6 +1,8 @@
 
 /* =========================================================
-   START SCENE — Awwwards-style minimal neon typography
+   START SCENE — Awwwards-style neon menu
+   NEON DODGE title preserved exactly.
+   Lower section fully redesigned: card + big play button.
    ========================================================= */
 
 import Phaser from 'phaser';
@@ -29,18 +31,8 @@ export class StartScene extends Phaser.Scene {
   private selectedSkin = 0;
   private floatingPlayer!: Phaser.GameObjects.Container;
   private floatingPlayerImg!: Phaser.GameObjects.Image;
-  private floatingPlayerCX = 0;
-  private floatingPlayerCY = 0;
   private playerTrail: Phaser.GameObjects.Arc[] = [];
   private playerTrailTimer = 0;
-
-  /* Skin selector */
-  private skinGfx!: Phaser.GameObjects.Graphics;
-  private skinNameLabels: Phaser.GameObjects.Text[] = [];
-  private readonly _stileSize = 36;
-  private readonly _stileSpacing = 54;
-  private _stileY = 0;
-  private _stileX0 = 0;
 
   /* Title refs for glitch */
   private glitchTimer  = 0;
@@ -48,6 +40,16 @@ export class StartScene extends Phaser.Scene {
   private titleNeon!: Phaser.GameObjects.Text;
   private titleDodge!: Phaser.GameObjects.Text;
   private glitchTexts: Phaser.GameObjects.Text[] = [];
+
+  /* Card / color selector */
+  private skinGfx!: Phaser.GameObjects.Graphics;
+  private cardBorderGfx!: Phaser.GameObjects.Graphics;
+  private skinNameLabels: Phaser.GameObjects.Text[] = [];
+  private selectedColorTxt!: Phaser.GameObjects.Text;
+  private readonly TILE = 32;
+  private readonly TGAP = 52;
+  private tileY = 0;
+  private tileX0 = 0;
 
   constructor() { super({ key: 'StartScene' }); }
 
@@ -63,17 +65,16 @@ export class StartScene extends Phaser.Scene {
     this._drawScanlines();
 
     this._buildTitle();
-    this._buildHighScore();
 
     this.selectedSkin = parseInt(localStorage.getItem(STORAGE_SKIN) || '0', 10);
-    this._buildFloatingPlayer();
-    this._buildSkinSelector();
-    this._buildPlayButton();
-    this._buildLangSelector();
-    this._buildStats();
 
-    this.add.text(W - 10, H - 14, 'NEON DODGE v2', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#1a2a3a',
+    this._buildBestScore();
+    this._buildMainCard();
+    this._buildPlayButton();
+    this._buildFooter();
+
+    this.add.text(W - 10, H - 10, 'v2', {
+      fontSize: '9px', fontFamily: 'monospace', color: '#111e28',
     }).setOrigin(1, 1);
   }
 
@@ -160,7 +161,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     TITLE
+     TITLE  (preserved exactly)
   -------------------------------------------------------- */
   private _buildTitle() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
@@ -273,7 +274,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     GLITCH
+     GLITCH  (preserved exactly)
   -------------------------------------------------------- */
   private _fireGlitch() {
     this.glitchActive = true;
@@ -313,287 +314,342 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     HIGH SCORE
+     BEST SCORE  — elegant single line below title
   -------------------------------------------------------- */
-  private _buildHighScore() {
+  private _buildBestScore() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const hi = parseInt(localStorage.getItem(STORAGE_HIGHSCORE) || '0', 10);
+    const y = H * 0.393;
 
-    const div = this.add.graphics();
-    div.lineStyle(1, 0x00ffff, 0.08);
-    div.lineBetween(W * 0.15, H * 0.385, W * 0.85, H * 0.385);
+    /* glow separator line */
+    const g = this.add.graphics();
+    g.lineStyle(1, 0x00ffff, 0.1);
+    g.lineBetween(W * 0.1, y - 14, W * 0.9, y - 14);
 
     if (hi > 0) {
-      this.add.text(W / 2, H * 0.41, `★  ${t().best}  ${hi}`, {
-        fontSize: '15px', fontFamily: 'monospace', color: '#33aacc',
-        stroke: '#006688', strokeThickness: 1,
+      this.add.text(W / 2, y, `★  ${t().best.toUpperCase()}  ${hi}`, {
+        fontSize: '14px', fontFamily: '"Orbitron", monospace',
+        fontStyle: 'bold',
+        color: '#050510', stroke: '#00ddcc', strokeThickness: 1.2,
+        shadow: { color: '#00ffcc', blur: 8, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5);
     } else {
-      this.add.text(W / 2, H * 0.41, t().noRecord, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#1a3040',
+      this.add.text(W / 2, y, t().noRecord, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#1a3040', letterSpacing: 2,
       }).setOrigin(0.5);
     }
   }
 
   /* --------------------------------------------------------
-     FLOATING PLAYER PREVIEW
+     MAIN CARD  — rocket preview + color selector
   -------------------------------------------------------- */
-  private _buildFloatingPlayer() {
+  private _buildMainCard() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const skin = SKINS[this.selectedSkin];
-    const cx = W / 2, cy = H * 0.425;
-    this.floatingPlayerCX = cx;
-    this.floatingPlayerCY = cy;
 
-    const glow = this.add.circle(cx, cy, 30, skin.color, 0.08);
+    /* Card geometry */
+    const CX = W / 2;
+    const CARD_TOP  = H * 0.428;
+    const CARD_H    = 222;
+    const CARD_W    = W - 40;
+    const CARD_CY   = CARD_TOP + CARD_H / 2;
+    const R         = 14;
+
+    /* ── Card background ── */
+    const cbg = this.add.graphics();
+    cbg.fillStyle(0x07071a, 0.82);
+    cbg.fillRoundedRect(W / 2 - CARD_W / 2, CARD_TOP, CARD_W, CARD_H, R);
+
+    /* ── Card border (updates color with selection) ── */
+    this.cardBorderGfx = this.add.graphics();
+    this._drawCardBorder(CARD_W, CARD_TOP, CARD_H, R);
+
+    /* ── Top accent line inside card ── */
+    const topLine = this.add.graphics();
+    topLine.lineStyle(1, 0x00ffff, 0.18);
+    topLine.lineBetween(W / 2 - CARD_W / 2 + R, CARD_TOP + 1, W / 2 + CARD_W / 2 - R, CARD_TOP + 1);
+
+    /* ── Rocket preview ── */
+    const rocketY = CARD_TOP + 62;
+    const skin = SKINS[this.selectedSkin];
+
+    const rocketGlow = this.add.circle(CX, rocketY, 32, skin.color, 0.08);
     this.tweens.add({
-      targets: glow,
-      alpha: { from: 0.08, to: 0.02 }, scaleX: 1.2, scaleY: 1.2,
-      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: rocketGlow,
+      alpha: { from: 0.08, to: 0.02 }, scaleX: 1.3, scaleY: 1.3,
+      duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     this.floatingPlayerImg = this.add.image(0, 0, 'player-rocket')
-      .setDisplaySize(48, 54)
+      .setDisplaySize(52, 60)
       .setTint(skin.color);
 
-    this.floatingPlayer = this.add.container(cx, cy, [this.floatingPlayerImg]);
+    this.floatingPlayer = this.add.container(CX, rocketY, [this.floatingPlayerImg]);
 
     this.tweens.add({
-      targets: [this.floatingPlayer, glow],
-      y: '-=12',
-      duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: [this.floatingPlayer, rocketGlow],
+      y: '-=10',
+      duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
-  }
 
-  /* --------------------------------------------------------
-     SKIN / COLOR SELECTOR  — awwwards redesign
-  -------------------------------------------------------- */
-  private _buildSkinSelector() {
-    const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const S   = this._stileSize;      // tile size px
-    const sp  = this._stileSpacing;   // tile spacing px
-    const cy  = H * 0.565;            // tile center Y
-    const total = SKINS.length;
-    const startX = W / 2 - ((total - 1) / 2) * sp;
-
-    this._stileY  = cy;
-    this._stileX0 = startX;
-
-    /* ── Section header with side lines ── */
-    const headerY = cy - S / 2 - 30;
-    const hg = this.add.graphics();
-    hg.lineStyle(1, 0x00ffff, 0.14);
-    hg.lineBetween(22, headerY, W / 2 - 54, headerY);
-    hg.lineBetween(W / 2 + 54, headerY, W - 22, headerY);
-    this.add.text(W / 2, headerY, t().selectSkin, {
-      fontSize: '11px', fontFamily: 'monospace',
-      color: '#4d8899', letterSpacing: 4,
+    /* ── Selected color name (big, bold, skin color) ── */
+    this.selectedColorTxt = this.add.text(CX, CARD_TOP + 112, t().skinNames[this.selectedSkin], {
+      fontSize: '20px',
+      fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold',
+      color: skin.hex,
+      stroke: skin.hex,
+      strokeThickness: 0.8,
+      shadow: { color: skin.hex, blur: 14, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
 
-    /* ── Graphics object for tile renders ── */
+    /* ── Divider + "RENK SEÇ" label ── */
+    const divY = CARD_TOP + 136;
+    const dg2 = this.add.graphics();
+    dg2.lineStyle(1, 0x00ffff, 0.1);
+    dg2.lineBetween(W / 2 - 110, divY, W / 2 + 110, divY);
+
+    this.add.text(CX, divY + 14, t().selectSkin, {
+      fontSize: '9px', fontFamily: 'monospace', color: '#2e4455', letterSpacing: 4,
+    }).setOrigin(0.5);
+
+    /* ── Color tiles ── */
+    const TILE = this.TILE, TGAP = this.TGAP;
+    const tileY = CARD_TOP + 178;
+    const tileX0 = CX - ((SKINS.length - 1) / 2) * TGAP;
+    this.tileY  = tileY;
+    this.tileX0 = tileX0;
+
     this.skinGfx = this.add.graphics();
     this.skinNameLabels = [];
 
-    for (let i = 0; i < total; i++) {
-      const x = startX + i * sp;
+    for (let i = 0; i < SKINS.length; i++) {
+      const x = tileX0 + i * TGAP;
       const isSel = i === this.selectedSkin;
 
       /* Name label */
-      const lbl = this.add.text(x, cy + S / 2 + 14, t().skinNames[i], {
-        fontSize: '10px', fontFamily: 'monospace',
-        color: isSel ? SKINS[i].hex : '#2d4050',
+      const lbl = this.add.text(x, tileY + TILE / 2 + 12, t().skinNames[i], {
+        fontSize: '8px', fontFamily: 'monospace',
+        color: isSel ? SKINS[i].hex : '#1e3040',
       }).setOrigin(0.5);
       this.skinNameLabels.push(lbl);
 
-      /* Invisible hit area (covers tile + label) */
-      const hit = this.add.rectangle(x, cy + 10, S + 16, S + 38, 0xffffff, 0)
+      /* Hit area */
+      const hit = this.add.rectangle(x, tileY + 8, TILE + 14, TILE + 30, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-
-      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.04); });
+      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.05); });
       hit.on('pointerout',  () => hit.setFillStyle(0xffffff, 0));
       hit.on('pointerdown', () => {
         this.selectedSkin = i;
-        this._refreshSkinDots();
-        this._updateFloatingPlayerColor();
+        this._refreshSelector();
+        this._updateRocketColor();
       });
     }
 
-    this._drawSkinTiles();
+    this._drawTiles();
+
+    void CARD_CY; void cbg; void topLine;
   }
 
-  private _drawSkinTiles() {
+  /* ── Card border (skin-tinted) ── */
+  private _drawCardBorder(CW: number, CT: number, CH: number, R: number) {
+    const g = this.cardBorderGfx;
+    g.clear();
+    const col = SKINS[this.selectedSkin].color;
+    g.lineStyle(1.5, col, 0.35);
+    g.strokeRoundedRect(GAME_WIDTH / 2 - CW / 2, CT, CW, CH, R);
+  }
+
+  /* ── Color tiles ── */
+  private _drawTiles() {
     const g = this.skinGfx;
     g.clear();
-    const startX = this._stileX0;
-    const cy     = this._stileY;
-    const S      = this._stileSize;
-    const sp     = this._stileSpacing;
-    const radius = 7;
+    const S = this.TILE, sp = this.TGAP;
+    const cy = this.tileY, startX = this.tileX0;
+    const r = 6;
 
     for (let i = 0; i < SKINS.length; i++) {
-      const x   = startX + i * sp;
+      const x = startX + i * sp;
       const col = SKINS[i].color;
       const sel = i === this.selectedSkin;
-      const half = S / 2;
+      const h = S / 2;
 
       if (sel) {
-        /* Soft outer glow — three layers */
-        g.lineStyle(10, col, 0.05);
-        g.strokeRoundedRect(x - half - 9, cy - half - 9, S + 18, S + 18, radius + 6);
-        g.lineStyle(5, col, 0.12);
-        g.strokeRoundedRect(x - half - 5, cy - half - 5, S + 10, S + 10, radius + 3);
-        g.lineStyle(2, col, 0.4);
-        g.strokeRoundedRect(x - half - 2, cy - half - 2, S + 4,  S + 4,  radius + 1);
-        /* Tile fill — full brightness */
+        g.lineStyle(8, col, 0.05);
+        g.strokeRoundedRect(x - h - 7, cy - h - 7, S + 14, S + 14, r + 4);
+        g.lineStyle(4, col, 0.14);
+        g.strokeRoundedRect(x - h - 4, cy - h - 4, S + 8,  S + 8,  r + 2);
+        g.lineStyle(2, col, 0.5);
+        g.strokeRoundedRect(x - h - 1, cy - h - 1, S + 2,  S + 2,  r + 1);
         g.fillStyle(col, 1);
-        g.fillRoundedRect(x - half, cy - half, S, S, radius);
-        /* Inner bright border for depth */
-        g.lineStyle(1.5, 0xffffff, 0.55);
-        g.strokeRoundedRect(x - half + 2, cy - half + 2, S - 4, S - 4, radius - 2);
+        g.fillRoundedRect(x - h, cy - h, S, S, r);
+        g.lineStyle(1.5, 0xffffff, 0.45);
+        g.strokeRoundedRect(x - h + 2, cy - h + 2, S - 4, S - 4, r - 2);
       } else {
-        /* Dim tile */
-        g.fillStyle(col, 0.18);
-        g.fillRoundedRect(x - half, cy - half, S, S, radius);
-        g.lineStyle(1, col, 0.32);
-        g.strokeRoundedRect(x - half, cy - half, S, S, radius);
+        g.fillStyle(col, 0.16);
+        g.fillRoundedRect(x - h, cy - h, S, S, r);
+        g.lineStyle(1, col, 0.3);
+        g.strokeRoundedRect(x - h, cy - h, S, S, r);
       }
     }
   }
 
-  private _refreshSkinDots() {
-    this._drawSkinTiles();
+  private _refreshSelector() {
+    const H = GAME_HEIGHT;
+    const CARD_TOP  = H * 0.428;
+    const CARD_H    = 222;
+    const CARD_W    = GAME_WIDTH - 40;
+    this._drawCardBorder(CARD_W, CARD_TOP, CARD_H, 14);
+    this._drawTiles();
+
+    const skin = SKINS[this.selectedSkin];
+    this.selectedColorTxt.setText(t().skinNames[this.selectedSkin]);
+    this.selectedColorTxt.setColor(skin.hex);
+    this.selectedColorTxt.setStroke(skin.hex, 0.8);
+
     for (let i = 0; i < SKINS.length; i++) {
       this.skinNameLabels[i].setColor(
-        i === this.selectedSkin ? SKINS[i].hex : '#2d4050'
+        i === this.selectedSkin ? SKINS[i].hex : '#1e3040'
       );
     }
   }
 
-  private _updateFloatingPlayerColor() {
+  private _updateRocketColor() {
     const col = SKINS[this.selectedSkin].color;
     this.floatingPlayerImg.setTint(col);
     this.playerTrail.forEach(d => d.setFillStyle(col));
   }
 
   /* --------------------------------------------------------
-     PLAY BUTTON
+     PLAY BUTTON  — full-width, bold, neon
   -------------------------------------------------------- */
   private _buildPlayButton() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cx = W / 2, cy = H * 0.718;
+    const CX = W / 2;
+    const cy  = H * 0.732;
+    const BW  = W - 48;
+    const BH  = 58;
 
-    const glow = this.add.rectangle(cx, cy, 210, 54, 0x00ffff, 0.04)
-      .setStrokeStyle(1, 0x00ffff, 0.18);
-    const btn = this.add.rectangle(cx, cy, 196, 46, 0x000000, 0)
-      .setStrokeStyle(2, 0x00ffff, 0.85)
-      .setInteractive({ useHandCursor: true });
-    const label = this.add.text(cx, cy, t().play, {
-      fontSize: '20px', fontFamily: 'monospace', color: '#00ffff',
-      stroke: '#00ffff', strokeThickness: 1,
+    /* outer glow shell */
+    const glow = this.add.graphics();
+    glow.lineStyle(12, 0x00ffff, 0.06);
+    glow.strokeRoundedRect(CX - BW / 2 - 6, cy - BH / 2 - 6, BW + 12, BH + 12, 14);
+    glow.lineStyle(4, 0x00ffff, 0.12);
+    glow.strokeRoundedRect(CX - BW / 2 - 2, cy - BH / 2 - 2, BW + 4, BH + 4, 12);
+
+    /* fill */
+    const fill = this.add.graphics();
+    fill.fillStyle(0x00ffff, 0.07);
+    fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 10);
+
+    /* border */
+    const border = this.add.graphics();
+    border.lineStyle(2, 0x00ffff, 1);
+    border.strokeRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 10);
+
+    /* text */
+    const label = this.add.text(CX, cy, t().play, {
+      fontSize: '22px',
+      fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold',
+      color: '#050510',
+      stroke: '#00ffff',
+      strokeThickness: 1.5,
+      shadow: { color: '#00ffff', blur: 10, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
 
+    /* invisible hit area */
+    const btn = this.add.rectangle(CX, cy, BW, BH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+
+    /* pulse animation */
     this.tweens.add({
-      targets: [glow, btn], alpha: { from: 1, to: 0.4 },
-      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: [fill, border], alpha: { from: 1, to: 0.45 },
+      duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
     this.tweens.add({
       targets: label, alpha: { from: 1, to: 0.55 },
-      duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 80,
+      duration: 950, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 100,
     });
 
     const _start = () => {
       localStorage.setItem(STORAGE_SKIN, String(this.selectedSkin));
       this.tweens.add({
-        targets: [btn, glow, label], scaleX: 1.06, scaleY: 1.06, alpha: 1,
-        duration: 80, yoyo: true,
+        targets: [border, fill, label], scaleX: 1.04, scaleY: 1.04, alpha: 1,
+        duration: 75, yoyo: true,
         onComplete: () => this.scene.start('GameScene', { skin: this.selectedSkin }),
       });
     };
 
     btn.on('pointerdown', _start);
     label.setInteractive({ useHandCursor: true }).on('pointerdown', _start);
-    this.input.on('pointerdown', (_ptr: unknown, go: Phaser.GameObjects.GameObject[]) => {
-      if (go && go.length > 0) return;
-      _start();
-    });
+
+    void glow;
   }
 
   /* --------------------------------------------------------
-     LANGUAGE SELECTOR  (below PLAY button)
+     FOOTER  — lang flags + stats (minimal)
   -------------------------------------------------------- */
-  private _buildLangSelector() {
+  private _buildFooter() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cy = H * 0.81;
+    const CX = W / 2;
     const lang = getLang();
-    const FLAG_SIZE = 26;
-    const gap = 20;
+    const FLAG_SIZE = 22;
+    const flagGap   = 18;
 
-    /* TR flag */
-    const flagTr = this.add.image(W / 2 - gap - FLAG_SIZE / 2, cy, 'flag-tr')
-      .setDisplaySize(FLAG_SIZE, FLAG_SIZE)
-      .setInteractive({ useHandCursor: true });
+    /* ── Language flags ── */
+    const flagY = H * 0.824;
 
-    /* EN flag */
-    const flagEn = this.add.image(W / 2 + gap + FLAG_SIZE / 2, cy, 'flag-en')
-      .setDisplaySize(FLAG_SIZE, FLAG_SIZE)
-      .setInteractive({ useHandCursor: true });
+    const flagTr = this.add.image(CX - flagGap - FLAG_SIZE / 2, flagY, 'flag-tr')
+      .setDisplaySize(FLAG_SIZE, FLAG_SIZE).setInteractive({ useHandCursor: true });
+    const flagEn = this.add.image(CX + flagGap + FLAG_SIZE / 2, flagY, 'flag-en')
+      .setDisplaySize(FLAG_SIZE, FLAG_SIZE).setInteractive({ useHandCursor: true });
 
-    /* Active highlight ring */
-    const activeTr = this.add.circle(flagTr.x, cy, FLAG_SIZE / 2 + 3, 0x000000, 0)
-      .setStrokeStyle(lang === 'tr' ? 2 : 0, 0x00ffff, 0.85);
-    const activeEn = this.add.circle(flagEn.x, cy, FLAG_SIZE / 2 + 3, 0x000000, 0)
-      .setStrokeStyle(lang === 'en' ? 2 : 0, 0x00ffff, 0.85);
+    const bsTr = flagTr.scaleX;
+    const bsEn = flagEn.scaleX;
 
-    /* Dim inactive flag */
-    flagTr.setAlpha(lang === 'tr' ? 1 : 0.38);
-    flagEn.setAlpha(lang === 'en' ? 1 : 0.38);
+    const ringTr = this.add.circle(flagTr.x, flagY, FLAG_SIZE / 2 + 3, 0x000000, 0)
+      .setStrokeStyle(lang === 'tr' ? 1.5 : 0, 0x00ffff, 0.9);
+    const ringEn = this.add.circle(flagEn.x, flagY, FLAG_SIZE / 2 + 3, 0x000000, 0)
+      .setStrokeStyle(lang === 'en' ? 1.5 : 0, 0x00ffff, 0.9);
 
-    const _switch = (newLang: 'tr' | 'en') => {
-      if (getLang() === newLang) return;
-      setLang(newLang);
-      this.scene.restart();
-    };
+    flagTr.setAlpha(lang === 'tr' ? 1 : 0.35);
+    flagEn.setAlpha(lang === 'en' ? 1 : 0.35);
 
+    const _switch = (l: 'tr' | 'en') => { if (getLang() !== l) { setLang(l); this.scene.restart(); } };
     flagTr.on('pointerdown', () => _switch('tr'));
     flagEn.on('pointerdown', () => _switch('en'));
+    flagTr.on('pointerover', () => { if (lang !== 'tr') { flagTr.setAlpha(0.7); flagTr.setScale(bsTr * 1.06); } });
+    flagTr.on('pointerout',  () => { if (lang !== 'tr') { flagTr.setAlpha(0.35); flagTr.setScale(bsTr); } });
+    flagEn.on('pointerover', () => { if (lang !== 'en') { flagEn.setAlpha(0.7); flagEn.setScale(bsEn * 1.06); } });
+    flagEn.on('pointerout',  () => { if (lang !== 'en') { flagEn.setAlpha(0.35); flagEn.setScale(bsEn); } });
 
-    flagTr.on('pointerover', () => { if (lang !== 'tr') flagTr.setAlpha(0.7); });
-    flagTr.on('pointerout',  () => { if (lang !== 'tr') flagTr.setAlpha(0.38); });
-    flagEn.on('pointerover', () => { if (lang !== 'en') flagEn.setAlpha(0.7); });
-    flagEn.on('pointerout',  () => { if (lang !== 'en') flagEn.setAlpha(0.38); });
+    void ringTr; void ringEn;
 
-    /* Suppress game-start on flag click */
-    void activeTr; void activeEn;
-  }
-
-  /* --------------------------------------------------------
-     STATS FOOTER
-  -------------------------------------------------------- */
-  private _buildStats() {
-    const W = GAME_WIDTH, H = GAME_HEIGHT;
+    /* ── Lifetime stats (only if played before) ── */
     const gamesPlayed = parseInt(localStorage.getItem(STORAGE_GAMES_PLAYED) || '0', 10);
     if (gamesPlayed === 0) return;
 
     const totalTime = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0');
     const maxCombo  = parseInt(localStorage.getItem(STORAGE_MAX_COMBO)    || '0', 10);
-    const cy = H * 0.878;
+
+    const statY = H * 0.875;
 
     const dg = this.add.graphics();
     dg.lineStyle(1, 0x00ffff, 0.07);
-    dg.lineBetween(W * 0.12, cy - 20, W * 0.88, cy - 20);
+    dg.lineBetween(W * 0.15, statY - 18, W * 0.85, statY - 18);
 
-    const col = (x: number, value: string, lbl: string) => {
-      this.add.text(x, cy - 8, value, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#6699aa',
-        stroke: '#003344', strokeThickness: 1,
+    const statCol = (x: number, val: string, lbl: string) => {
+      this.add.text(x, statY, val, {
+        fontSize: '13px', fontFamily: 'monospace', color: '#4d6677',
+        stroke: '#002233', strokeThickness: 1,
       }).setOrigin(0.5);
-      this.add.text(x, cy + 10, lbl, {
-        fontSize: '9px', fontFamily: 'monospace', color: '#3a5060', letterSpacing: 1,
+      this.add.text(x, statY + 16, lbl, {
+        fontSize: '8px', fontFamily: 'monospace', color: '#243038', letterSpacing: 1,
       }).setOrigin(0.5);
     };
 
-    col(W * 0.22, `${gamesPlayed}`, t().games);
-    col(W * 0.50, `${Math.floor(totalTime)}s`, t().totalTime);
-    col(W * 0.78, `${maxCombo}`, t().bestCombo);
+    statCol(W * 0.22, `${gamesPlayed}`,        t().games);
+    statCol(W * 0.50, `${Math.floor(totalTime)}s`, t().totalTime);
+    statCol(W * 0.78, `${maxCombo}`,            t().bestCombo);
   }
 }
