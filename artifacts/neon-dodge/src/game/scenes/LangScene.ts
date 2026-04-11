@@ -53,7 +53,7 @@ export class LangScene extends Phaser.Scene {
     const flagGap = 80;
     const flagY = panelY - 10;
 
-    this._makeFlag(W / 2 - flagGap, flagY, 'flag-tr', 'TR', 'TÜRKÇe', () => {
+    this._makeFlag(W / 2 - flagGap, flagY, 'flag-tr', 'TR', 'TÜRKÇE', () => {
       setLang('tr');
       this.scene.start('StartScene');
     });

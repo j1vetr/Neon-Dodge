@@ -14,6 +14,8 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG } from './constants';
 
 export function createGame(parent: HTMLElement): Phaser.Game {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
@@ -28,13 +30,15 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     input: {
       activePointers: 3,
     },
+    resolution: dpr,
     antialias: true,
-    roundPixels: false,
+    roundPixels: true,
     render: {
       antialias: true,
       antialiasGL: true,
       pixelArt: false,
       powerPreference: 'high-performance',
+      resolution: dpr,
     },
   };
 
