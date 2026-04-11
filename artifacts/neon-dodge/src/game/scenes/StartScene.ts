@@ -365,12 +365,15 @@ export class StartScene extends Phaser.Scene {
   private _buildSkinSelector() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cy = H * 0.578;
-    const spacing = 38;
+    const spacing = 56;
     const total = SKINS.length;
     const startX = W / 2 - ((total - 1) / 2) * spacing;
 
-    this.add.text(W / 2, cy - 22, t().selectSkin, {
-      fontSize: '10px', fontFamily: 'monospace', color: '#223344', letterSpacing: 3,
+    /* Label — larger and much more visible */
+    this.add.text(W / 2, cy - 34, t().selectSkin, {
+      fontSize: '13px', fontFamily: 'monospace',
+      color: '#aabbcc', letterSpacing: 3,
+      stroke: '#003344', strokeThickness: 1,
     }).setOrigin(0.5);
 
     this.skinDots  = [];
@@ -380,17 +383,28 @@ export class StartScene extends Phaser.Scene {
       const x = startX + i * spacing;
       const isSelected = i === this.selectedSkin;
       const col = SKINS[i].color;
+      const hex = SKINS[i].hex;
 
-      const ring = this.add.circle(x, cy, isSelected ? 14 : 11, 0x000000, 0)
-        .setStrokeStyle(isSelected ? 2 : 1, col, isSelected ? 0.9 : 0.3);
+      /* Outer glow ring */
+      const ring = this.add.circle(x, cy, isSelected ? 18 : 14, 0x000000, 0)
+        .setStrokeStyle(isSelected ? 2.5 : 1, col, isSelected ? 1 : 0.3);
       this.skinRings.push(ring);
 
-      const dot = this.add.circle(x, cy, isSelected ? 10 : 6, col, isSelected ? 1 : 0.45)
+      /* Colour dot — bigger, clickable */
+      const dot = this.add.circle(x, cy, isSelected ? 13 : 9, col, isSelected ? 1 : 0.5)
         .setInteractive({ useHandCursor: true });
       this.skinDots.push(dot);
 
-      dot.on('pointerover', () => { if (i !== this.selectedSkin) dot.setRadius(8).setAlpha(0.75); });
-      dot.on('pointerout',  () => { if (i !== this.selectedSkin) dot.setRadius(6).setAlpha(0.45); });
+      /* Skin name label below dot */
+      this.add.text(x, cy + 26, SKINS[i].name.toUpperCase(), {
+        fontSize: '9px', fontFamily: 'monospace',
+        color: isSelected ? hex : '#334455',
+        stroke: isSelected ? hex : 'transparent',
+        strokeThickness: 0.5,
+      }).setOrigin(0.5).setName(`skinlabel_${i}`);
+
+      dot.on('pointerover', () => { if (i !== this.selectedSkin) dot.setRadius(11).setAlpha(0.78); });
+      dot.on('pointerout',  () => { if (i !== this.selectedSkin) dot.setRadius(9).setAlpha(0.50); });
       dot.on('pointerdown', () => {
         this.selectedSkin = i;
         this._refreshSkinDots();
@@ -403,9 +417,9 @@ export class StartScene extends Phaser.Scene {
     for (let i = 0; i < SKINS.length; i++) {
       const col = SKINS[i].color;
       const isSel = i === this.selectedSkin;
-      this.skinDots[i].setRadius(isSel ? 10 : 6).setAlpha(isSel ? 1 : 0.45);
-      this.skinRings[i].setRadius(isSel ? 14 : 11)
-        .setStrokeStyle(isSel ? 2 : 1, col, isSel ? 0.9 : 0.3);
+      this.skinDots[i].setRadius(isSel ? 13 : 9).setAlpha(isSel ? 1 : 0.50);
+      this.skinRings[i].setRadius(isSel ? 18 : 14)
+        .setStrokeStyle(isSel ? 2.5 : 1, col, isSel ? 1 : 0.3);
     }
   }
 
@@ -524,10 +538,11 @@ export class StartScene extends Phaser.Scene {
 
     const col = (x: number, value: string, lbl: string) => {
       this.add.text(x, cy - 8, value, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#334d5c',
+        fontSize: '14px', fontFamily: 'monospace', color: '#6699aa',
+        stroke: '#003344', strokeThickness: 1,
       }).setOrigin(0.5);
       this.add.text(x, cy + 10, lbl, {
-        fontSize: '9px', fontFamily: 'monospace', color: '#1e2e38', letterSpacing: 1,
+        fontSize: '9px', fontFamily: 'monospace', color: '#3a5060', letterSpacing: 1,
       }).setOrigin(0.5);
     };
 
