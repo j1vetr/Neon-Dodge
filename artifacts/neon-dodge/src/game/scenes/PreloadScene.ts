@@ -16,6 +16,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('icon-menu',     '/assets/icon-menu.png');
     this.load.image('flag-tr',       '/assets/flag-tr.png');
     this.load.image('flag-en',       '/assets/flag-en.png');
+    this.load.image('icon-settings', '/assets/icon-settings.png');
   }
 
   create() {

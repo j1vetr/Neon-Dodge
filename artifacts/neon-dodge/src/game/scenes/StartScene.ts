@@ -552,44 +552,35 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     SETTINGS GEAR BUTTON  — bottom centre, very subtle
+     SETTINGS GEAR BUTTON  — PNG image, continuously spins
   -------------------------------------------------------- */
   private _buildSettingsBtn() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cx = W / 2, cy = H * 0.901;
+    const SIZE = 38;
 
-    /* Small gear drawn with graphics */
-    const g = this.add.graphics();
-    g.fillStyle(0x1a2e3a, 1);
-    g.fillCircle(cx, cy, 18);
-    g.lineStyle(1, 0x00ffff, 0.3);
-    g.strokeCircle(cx, cy, 18);
+    /* PNG icon — tinted cyan, constant slow rotation */
+    const icon = this.add.image(cx, cy, 'icon-settings')
+      .setDisplaySize(SIZE, SIZE)
+      .setTint(0x00ffff)
+      .setAlpha(0.55);
 
-    /* Gear teeth — 8 small tick lines around the circle */
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI * 2;
-      const r0 = 14, r1 = 18;
-      g.lineStyle(2.5, 0x00ffff, 0.35);
-      g.lineBetween(
-        cx + Math.cos(angle) * r0, cy + Math.sin(angle) * r0,
-        cx + Math.cos(angle) * r1, cy + Math.sin(angle) * r1,
-      );
-    }
-    /* Inner circle */
-    g.fillStyle(0x00ffff, 0.18);
-    g.fillCircle(cx, cy, 7);
-
-    /* Hit area */
-    const hit = this.add.circle(cx, cy, 22, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerover', () => g.setAlpha(1.4));
-    hit.on('pointerout',  () => g.setAlpha(1));
-    hit.on('pointerdown', () => this._toggleSettings());
-
-    /* Gentle pulse */
+    /* Continuous spin */
     this.tweens.add({
-      targets: g, alpha: { from: 0.7, to: 1 },
-      duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: icon,
+      angle: 360,
+      duration: 5000,
+      repeat: -1,
+      ease: 'Linear',
     });
+
+    /* Hover: brighten + speed up (alpha pulse) */
+    const hit = this.add.circle(cx, cy, SIZE / 2 + 6, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+
+    hit.on('pointerover', () => icon.setAlpha(1).setTint(0x00ffff));
+    hit.on('pointerout',  () => icon.setAlpha(0.55).setTint(0x00ffff));
+    hit.on('pointerdown', () => this._toggleSettings());
   }
 
   /* --------------------------------------------------------
