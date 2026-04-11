@@ -11,17 +11,17 @@ import {
   GAME_WIDTH, GAME_HEIGHT,
   PLAYER_SIZE, PLAYER_HORIZONTAL_SPEED, PLAYER_START_X, PLAYER_START_Y,
   LEVELS, LEVEL_DURATION, LevelDef,
-  OBSTACLE_THICKNESS, LASER_THICKNESS, LASER_WARN_DURATION, LASER_STARTS_AT_LEVEL,
+  OBSTACLE_THICKNESS,
   TRAIL_PARTICLE_LIFETIME, TRAIL_EMIT_INTERVAL,
   SHAKE_DURATION, SHAKE_INTENSITY,
-  COLOR_BG, COLOR_LASER, COLOR_SHIELD, COLOR_SLOW, COLOR_DOUBLE,
+  COLOR_BG, COLOR_SHIELD, COLOR_SLOW, COLOR_DOUBLE,
   SKINS, STORAGE_HIGHSCORE, STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
   COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5,
   NEAR_MISS_DISTANCE, NEAR_MISS_BONUS,
   POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_SLOW_DURATION, POWERUP_DOUBLE_DURATION,
 } from '../constants';
 import {
-  playTap, playHit, playScore, playLaserWarn,
+  playTap, playHit, playScore,
   playCombo, playNearMiss, playPowerUp, playShieldHit,
   startAmbient, updateAmbientLevel, stopAmbient,
 } from '../audio';
@@ -479,51 +479,28 @@ export class GameScene extends Phaser.Scene {
   /* --------------------------------------------------------
      OBSTACLE SPAWNING
   -------------------------------------------------------- */
-  private _spawnObstacle(time: number) {
+  private _spawnObstacle(_time: number) {
     const W = GAME_WIDTH;
-    const def = this.levelDef;
     const waveId = ++this.waveCounter;
     const y = -20;
 
-    const lasersUnlocked = this.currentLevel >= LASER_STARTS_AT_LEVEL - 1;
-    const isLaser = lasersUnlocked && Math.random() > 0.70;
+    const gMin = Math.round(this._lerpNum('gapMin'));
+    const gMax = Math.round(this._lerpNum('gapMax'));
+    const gapSize = Phaser.Math.Between(gMin, gMax);
+    const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
+    const wc = this._lerpWallColor();
 
-    if (isLaser) {
-      const gapSize = Phaser.Math.Between(PLAYER_SIZE * 3, PLAYER_SIZE * 4);
-      const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
+    const leftW = gapX;
+    const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1);
 
-      const leftW = gapX;
-      const laserLeft = this.add.rectangle(leftW / 2, y, leftW, LASER_THICKNESS, COLOR_LASER, 0);
-      const rightW = W - gapX - gapSize;
-      const rightX = gapX + gapSize + rightW / 2;
-      const laserRight = this.add.rectangle(rightX, y, rightW, LASER_THICKNESS, COLOR_LASER, 0);
+    const rightW = W - gapX - gapSize;
+    const rightX = gapX + gapSize + rightW / 2;
+    const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1);
 
-      /* born = time so laser is active immediately when visible on screen */
-      const born = time;
-      this.obstacles.push(
-        { body: laserLeft,  isLaser: true, born, waveId },
-        { body: laserRight, isLaser: true, born, waveId },
-      );
-      playLaserWarn();
-    } else {
-      const gMin = Math.round(this._lerpNum('gapMin'));
-      const gMax = Math.round(this._lerpNum('gapMax'));
-      const gapSize = Phaser.Math.Between(gMin, gMax);
-      const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
-      const wc = this._lerpWallColor();
-
-      const leftW = gapX;
-      const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1);
-
-      const rightW = W - gapX - gapSize;
-      const rightX = gapX + gapSize + rightW / 2;
-      const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1);
-
-      this.obstacles.push(
-        { body: left,  isLaser: false, waveId },
-        { body: right, isLaser: false, waveId },
-      );
-    }
+    this.obstacles.push(
+      { body: left,  isLaser: false, waveId },
+      { body: right, isLaser: false, waveId },
+    );
 
     /* Maybe spawn a power-up too */
     if (Math.random() < POWERUP_SPAWN_CHANCE) {
@@ -692,13 +669,8 @@ export class GameScene extends Phaser.Scene {
       const obs = this.obstacles[i];
       obs.body.y += speed * dt;
 
-      if (obs.isLaser) {
-        /* Laser is always active (born = spawn time), full opacity */
-        obs.body.setFillStyle(COLOR_LASER, 0.92);
-      } else {
-        /* Non-laser bars: update colour live every frame */
-        obs.body.setFillStyle(liveColor, 1);
-      }
+      /* Update obstacle colour live every frame */
+      obs.body.setFillStyle(liveColor, 1);
 
       /* Near-miss + combo: first time obstacle row crosses PLAYER_START_Y */
       if (!obs.passed && obs.body.y > PLAYER_START_Y) {
@@ -826,7 +798,6 @@ export class GameScene extends Phaser.Scene {
     const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75;
 
     for (const obs of this.obstacles) {
-      if (obs.isLaser && obs.born != null && this.time.now < obs.born) continue;
 
       const bx = obs.body.x, by = obs.body.y;
       const hw = obs.body.displayWidth / 2, hh = obs.body.displayHeight / 2;
