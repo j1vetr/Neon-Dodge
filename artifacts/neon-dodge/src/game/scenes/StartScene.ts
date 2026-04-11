@@ -56,7 +56,6 @@ export class StartScene extends Phaser.Scene {
   /* Settings panel */
   private settingsObjs: (Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown })[] = [];
   private settingsOpen  = false;
-  private soundLabelTxt!: Phaser.GameObjects.Text;
 
   constructor() { super({ key: 'StartScene' }); }
 
@@ -590,7 +589,7 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX = W / 2;
     const py  = H * 0.494;
-    const PW  = 284, PH = 274;
+    const PW  = 284, PH = 292;
     const D   = 90;
 
     const push = <T extends Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>(o: T) => {
@@ -671,38 +670,43 @@ export class StartScene extends Phaser.Scene {
     push(rule2);
 
     /* ── Sound section ── */
-    push(this.add.text(CX, py - PH/2 + 170, t().sound, {
+    push(this.add.text(CX, py - PH/2 + 168, t().sound, {
       fontSize: '9px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
     }).setOrigin(0.5).setDepth(D));
 
-    const soundOn = localStorage.getItem(STORAGE_SOUND) !== 'off';
-    const soundBg = push(this.add.graphics().setDepth(D));
-    const soundBtnY = py - PH/2 + 202;
-    const drawSoundBtn = (on: boolean) => {
-      soundBg.clear();
-      const col = on ? 0x00ffcc : 0x334455;
-      soundBg.lineStyle(1.5, col, 1);
-      soundBg.strokeRoundedRect(CX - 66, soundBtnY - 17, 132, 34, 8);
-      soundBg.fillStyle(col, 0.08);
-      soundBg.fillRoundedRect(CX - 66, soundBtnY - 17, 132, 34, 8);
-    };
-    drawSoundBtn(soundOn);
+    const soundOn  = localStorage.getItem(STORAGE_SOUND) !== 'off';
+    const ICO      = 44;
+    const onX      = CX - ICO / 2 - 18;
+    const offX     = CX + ICO / 2 + 18;
+    const soundY   = py - PH/2 + 208;
 
-    this.soundLabelTxt = push(this.add.text(CX, soundBtnY, soundOn ? t().soundOn : t().soundOff, {
-      fontSize: '13px', fontFamily: 'monospace',
-      color: soundOn ? '#00ffcc' : '#445566',
-    }).setOrigin(0.5).setDepth(D)) as Phaser.GameObjects.Text &
-      { setVisible(v: boolean): unknown };
+    const ringOn  = push(this.add.circle(onX, soundY, ICO / 2 + 5, 0x000000, 0)
+      .setStrokeStyle(soundOn ? 2 : 0, 0x00ffcc, 1).setDepth(D));
+    const ringOff = push(this.add.circle(offX, soundY, ICO / 2 + 5, 0x000000, 0)
+      .setStrokeStyle(!soundOn ? 2 : 0, 0xff4477, 1).setDepth(D));
 
-    const soundHit = push(this.add.rectangle(CX, soundBtnY, 140, 40, 0xffffff, 0)
+    const iconOn = push(this.add.image(onX, soundY, 'icon-sound-on')
+      .setDisplaySize(ICO, ICO)
+      .setTint(soundOn ? 0x00ffcc : 0x334455)
+      .setAlpha(soundOn ? 1 : 0.28)
       .setInteractive({ useHandCursor: true }).setDepth(D));
-    soundHit.on('pointerdown', () => {
-      const next = localStorage.getItem(STORAGE_SOUND) === 'off';
-      setSoundEnabled(next);
-      drawSoundBtn(next);
-      this.soundLabelTxt.setText(next ? t().soundOn : t().soundOff);
-      this.soundLabelTxt.setColor(next ? '#00ffcc' : '#445566');
-    });
+
+    const iconOff = push(this.add.image(offX, soundY, 'icon-sound-off')
+      .setDisplaySize(ICO, ICO)
+      .setTint(!soundOn ? 0xff4477 : 0x334455)
+      .setAlpha(!soundOn ? 1 : 0.28)
+      .setInteractive({ useHandCursor: true }).setDepth(D));
+
+    const applySound = (on: boolean) => {
+      setSoundEnabled(on);
+      iconOn .setTint(on  ? 0x00ffcc : 0x334455).setAlpha(on  ? 1 : 0.28);
+      iconOff.setTint(!on ? 0xff4477 : 0x334455).setAlpha(!on ? 1 : 0.28);
+      (ringOn  as Phaser.GameObjects.Arc).setStrokeStyle(on  ? 2 : 0, 0x00ffcc, 1);
+      (ringOff as Phaser.GameObjects.Arc).setStrokeStyle(!on ? 2 : 0, 0xff4477, 1);
+    };
+
+    iconOn .on('pointerdown', () => applySound(true));
+    iconOff.on('pointerdown', () => applySound(false));
 
     /* ── Rule 3 ── */
     const rule3 = this.add.graphics().setDepth(D);
