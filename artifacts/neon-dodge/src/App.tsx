@@ -18,8 +18,16 @@ export default function App() {
     gameRef.current = createGame(containerRef.current);
 
     return () => {
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
+      if (gameRef.current) {
+        /* Close AudioContext first so visibility-change events can't fire
+           on an already-destroyed context after HMR remounts. */
+        try {
+          const ctx = (gameRef.current.sound as any)?.context as AudioContext | undefined;
+          if (ctx && ctx.state !== 'closed') ctx.close();
+        } catch (_) { /* ignore */ }
+        gameRef.current.destroy(true);
+        gameRef.current = null;
+      }
     };
   }, []);
 
