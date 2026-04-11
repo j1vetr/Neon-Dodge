@@ -550,9 +550,12 @@ export class GameScene extends Phaser.Scene {
       duration: 800, repeat: -1, ease: 'Sine.easeOut',
     });
 
-    /* Gentle float tween on badge */
+    /* Gentle float tween on badge — icon excluded when it's an image
+       because absolute scaleX would override setDisplaySize */
+    const floatTargets: Phaser.GameObjects.GameObject[] = [body];
+    if (type !== 'shield') floatTargets.push(icon);
     this.tweens.add({
-      targets: [body, icon],
+      targets: floatTargets,
       scaleX: 1.06, scaleY: 1.06,
       duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
