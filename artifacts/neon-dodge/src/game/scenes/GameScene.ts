@@ -37,7 +37,7 @@ interface Obstacle {
 
 interface PowerUp {
   body: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Text;
+  icon: Phaser.GameObjects.Text | Phaser.GameObjects.Image;
   ring: Phaser.GameObjects.Arc;
   type: 'shield' | 'double';
   collected: boolean;
@@ -508,20 +508,19 @@ export class GameScene extends Phaser.Scene {
     const types: Array<'shield' | 'double'> = ['shield', 'double'];
     const type = types[Math.floor(Math.random() * types.length)];
 
-    const colorMap  = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
-    const labelMap  = { shield: 'SHIELD', double: '×2 PTS' };
-    const color = colorMap[type];
+    const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
+    const color    = colorMap[type];
     const hexColor = '#' + color.toString(16).padStart(6, '0');
 
-    /* Badge dimensions */
-    const bw = type === 'double' ? 56 : 68;
-    const bh = 26;
+    /* Badge dimensions — shield is square to frame the icon */
+    const bw = type === 'shield' ? 44 : 60;
+    const bh = type === 'shield' ? 44 : 26;
 
     const x = Phaser.Math.Between(bw / 2 + 10, W - bw / 2 - 10);
     const y = -bh - 10;
 
     /* Outer pulsing ring */
-    const ring = this.add.circle(x, y, bw * 0.65, color, 0.12);
+    const ring = this.add.circle(x, y, bw * 0.75, color, 0.12);
     ring.setDepth(5);
 
     /* Badge background */
@@ -529,11 +528,20 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(2, color, 1);
     body.setDepth(6);
 
-    /* Label text */
-    const icon = this.add.text(x, y, labelMap[type], {
-      fontSize: '13px', fontFamily: 'monospace',
-      color: hexColor, fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(7);
+    /* Icon — PNG for shield, text for double */
+    let icon: Phaser.GameObjects.Text | Phaser.GameObjects.Image;
+    if (type === 'shield') {
+      icon = this.add.image(x, y, 'icon-shield')
+        .setDisplaySize(30, 30)
+        .setTint(color)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(7);
+    } else {
+      icon = this.add.text(x, y, '×2 PTS', {
+        fontSize: '13px', fontFamily: 'monospace',
+        color: hexColor, fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(7);
+    }
 
     /* Pulsing ring tween */
     this.tweens.add({

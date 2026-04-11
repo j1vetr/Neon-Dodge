@@ -9,7 +9,7 @@ export class PreloadScene extends Phaser.Scene {
   constructor() { super({ key: 'PreloadScene' }); }
 
   preload() {
-    /* No image assets — all visuals drawn with Phaser primitives */
+    this.load.image('icon-shield', '/assets/shield.png');
   }
 
   create() {
