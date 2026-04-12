@@ -605,14 +605,14 @@ export class GameScene extends Phaser.Scene {
   private _spawnPowerUp() {
     const W = GAME_WIDTH;
     /* Kalkan sayısına göre spawn oranı:
-       0 kalkan → %50 kalkan  |  1 kalkan → %15 kalkan  |  2 kalkan → hiç kalkan */
+       0 kalkan → %20 kalkan  |  1 kalkan → %9 kalkan  |  2 kalkan → hiç kalkan */
     let type: 'shield' | 'double';
     if (this.shieldCount >= 2) {
       type = 'double';
     } else if (this.shieldCount === 1) {
-      type = Math.random() < 0.15 ? 'shield' : 'double';
+      type = Math.random() < 0.09 ? 'shield' : 'double';
     } else {
-      type = Math.random() < 0.5 ? 'shield' : 'double';
+      type = Math.random() < 0.20 ? 'shield' : 'double';
     }
 
     const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
