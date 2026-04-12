@@ -415,70 +415,163 @@ export class GameScene extends Phaser.Scene {
     playScore(this.currentLevel);
     updateAmbientLevel(this.currentLevel);
 
-    this.cameras.main.flash(320, 20, 20, 20);
+    const W = GAME_WIDTH, H = GAME_HEIGHT;
+    const CX = W / 2;
+    const CY = H * 0.38;
+    const def  = this.levelDef;
+    const col  = def.wallColor;
+    const hex  = '#' + col.toString(16).padStart(6, '0');
+    const isZone = !!def.zone;
 
-    const W = GAME_WIDTH;
-    const def = this.levelDef;
-    const col = def.wallColor;
-    const hex = '#' + col.toString(16).padStart(6, '0');
-    const isZoneEntry = !!def.zone;
-    const bannerH = isZoneEntry ? 152 : 116;
+    /* ── 1. Camera shake ──────────────────────────── */
+    this.cameras.main.shake(isZone ? 400 : 240, isZone ? 0.009 : 0.005);
 
-    this.levelBannerContainer.removeAll(true);
-    this.levelBannerContainer.setAlpha(0);
-    this.levelBannerContainer.setPosition(W / 2, GAME_HEIGHT * 0.40);
+    /* ── 2. Full-screen color pulse ───────────────── */
+    const flashRect = this.add.rectangle(CX, H / 2, W, H, col, 0).setDepth(28);
+    this.tweens.add({
+      targets: flashRect,
+      alpha: { from: 0, to: isZone ? 0.28 : 0.16 },
+      duration: 70, yoyo: true, repeat: isZone ? 2 : 1,
+      ease: 'Sine.easeOut',
+      onComplete: () => flashRect.destroy(),
+    });
 
-    const pill = this.add.rectangle(0, 0, 560, bannerH, 0x000000, 0.82);
-    pill.setStrokeStyle(isZoneEntry ? 6 : 4, col, 1);
-    this.levelBannerContainer.add(pill);
-
-    if (isZoneEntry) {
-      const zoneTxt = this.add.text(0, -36, `◆  ${def.zone}  ◆`, {
-        fontSize: '26px', fontFamily: 'monospace',
-        color: hex, stroke: hex, strokeThickness: 2,
-        letterSpacing: 4,
-      }).setOrigin(0.5);
-      this.levelBannerContainer.add(zoneTxt);
-
-      const lvlTxt = this.add.text(0, 12, def.label, {
-        fontSize: '48px', fontFamily: 'monospace',
-        color: hex, stroke: hex, strokeThickness: 2,
-      }).setOrigin(0.5);
-      this.levelBannerContainer.add(lvlTxt);
-
-      const subTxt = this.add.text(0, 60, `NEW ZONE UNLOCKED`, {
-        fontSize: '20px', fontFamily: 'monospace', color: '#445566', letterSpacing: 2,
-      }).setOrigin(0.5);
-      this.levelBannerContainer.add(subTxt);
-    } else {
-      const lvlTxt = this.add.text(0, -20, def.label, {
-        fontSize: '52px', fontFamily: 'monospace',
-        color: hex, stroke: hex, strokeThickness: 2,
-      }).setOrigin(0.5);
-      this.levelBannerContainer.add(lvlTxt);
-
-      const speed = Math.round(this._lerpNum('scrollSpeed'));
-      const subTxt = this.add.text(0, 32, `↓ ${speed} px/s`, {
-        fontSize: '22px', fontFamily: 'monospace', color: '#445566',
-      }).setOrigin(0.5);
-      this.levelBannerContainer.add(subTxt);
+    /* ── 3. Horizontal neon scan-lines sweep ─────── */
+    const lineCount = isZone ? 8 : 5;
+    for (let i = 0; i < lineCount; i++) {
+      const ly = (H / (lineCount + 1)) * (i + 1);
+      const thickness = i % 2 === 0 ? 3 : 1;
+      const alpha = i % 2 === 0 ? 0.75 : 0.35;
+      const scan = this.add.rectangle(-W, ly, W, thickness, col, alpha).setDepth(27);
+      this.tweens.add({
+        targets: scan,
+        x: W * 1.5,
+        duration: isZone ? 320 : 260,
+        delay: i * 28,
+        ease: 'Cubic.Out',
+        onComplete: () => scan.destroy(),
+      });
     }
 
-    this.levelBannerContainer.setScale(0.55);
-    const holdMs = isZoneEntry ? 1400 : 900;
+    /* ── 4. Shockwave rings from center ─────────── */
+    const ringCount = isZone ? 5 : 3;
+    for (let r = 0; r < ringCount; r++) {
+      const ring = this.add.circle(CX, CY, 12, 0, 0).setDepth(26);
+      ring.setStrokeStyle(isZone ? 5 : 3, col, 1);
+      this.tweens.add({
+        targets: ring,
+        scaleX: isZone ? 18 : 12,
+        scaleY: isZone ? 18 : 12,
+        alpha: 0,
+        duration: isZone ? 750 : 550,
+        delay: r * 110,
+        ease: 'Cubic.Out',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    /* ── 5. Main banner container ────────────────── */
+    this.levelBannerContainer.removeAll(true);
+    this.levelBannerContainer.setAlpha(1).setScale(1);
+    this.levelBannerContainer.setPosition(CX, CY);
+
+    if (isZone) {
+      /* ─── ZONE ENTRY: dramatic 3-layer layout ─── */
+
+      /* Side bars sweep in from edges */
+      const barL = this.add.rectangle(-360, 0, 120, 5, col, 0).setOrigin(0.5);
+      const barR = this.add.rectangle( 360, 0, 120, 5, col, 0).setOrigin(0.5);
+      this.levelBannerContainer.add([barL, barR]);
+      this.tweens.add({ targets: barL, alpha: 0.9, x: -220, duration: 300, delay: 60, ease: 'Cubic.Out' });
+      this.tweens.add({ targets: barR, alpha: 0.9, x:  220, duration: 300, delay: 60, ease: 'Cubic.Out' });
+
+      /* Zone badge */
+      const zoneBg = this.add.rectangle(0, -72, 480, 46, col, 0.12).setAlpha(0);
+      zoneBg.setStrokeStyle(2, col, 0.5);
+      const zoneTxt = this.add.text(0, -72, `◆  ${def.zone}  ◆`, {
+        fontSize: '28px', fontFamily: '"Orbitron", monospace',
+        color: hex, letterSpacing: 8,
+      }).setOrigin(0.5).setAlpha(0);
+      this.levelBannerContainer.add([zoneBg, zoneTxt]);
+      this.tweens.add({ targets: [zoneBg, zoneTxt], alpha: 1, y: { from: -90, to: -72 }, duration: 240, delay: 120, ease: 'Cubic.Out' });
+
+      /* Main level text — scale pop with glow */
+      const lvlTxt = this.add.text(0, 12, def.label, {
+        fontSize: '100px', fontFamily: '"Orbitron", monospace',
+        fontStyle: 'bold', color: '#ffffff',
+        stroke: hex, strokeThickness: 4,
+        shadow: { color: hex, blur: 40, fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5).setScale(0).setAlpha(0);
+      this.levelBannerContainer.add(lvlTxt);
+      this.tweens.add({ targets: lvlTxt, scaleX: 1, scaleY: 1, alpha: 1, duration: 320, delay: 80, ease: 'Back.Out(1.6)' });
+
+      /* "ZONE UNLOCKED" label */
+      const unlockTxt = this.add.text(0, 82, 'ZONE  UNLOCKED', {
+        fontSize: '22px', fontFamily: 'monospace', color: '#556677', letterSpacing: 8,
+      }).setOrigin(0.5).setAlpha(0);
+      this.levelBannerContainer.add(unlockTxt);
+      this.tweens.add({ targets: unlockTxt, alpha: 0.8, duration: 220, delay: 280 });
+
+      /* Bottom accent line */
+      const bottomLine = this.add.rectangle(0, 112, 0, 2, col, 0.6);
+      this.levelBannerContainer.add(bottomLine);
+      this.tweens.add({ targets: bottomLine, width: 400, duration: 320, delay: 200, ease: 'Cubic.Out' });
+
+      /* Exit */
+      this.time.delayedCall(1800, () => this._exitBanner(CY));
+
+    } else {
+      /* ─── NORMAL LEVEL UP: chromatic glitch pop ─ */
+
+      /* Chromatic aberration twins (red/cyan offset, then converge) */
+      const rOff = this.add.text(-5, 0, def.label, {
+        fontSize: '92px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold', color: '#ff0044',
+      }).setOrigin(0.5).setAlpha(0.5).setScale(0.1);
+      const bOff = this.add.text( 5, 0, def.label, {
+        fontSize: '92px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold', color: '#00ffff',
+      }).setOrigin(0.5).setAlpha(0.5).setScale(0.1);
+
+      /* Main text */
+      const lvlTxt = this.add.text(0, 0, def.label, {
+        fontSize: '92px', fontFamily: '"Orbitron", monospace',
+        fontStyle: 'bold', color: '#ffffff',
+        stroke: hex, strokeThickness: 3,
+        shadow: { color: hex, blur: 28, fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5).setScale(0.1).setAlpha(0);
+
+      this.levelBannerContainer.add([rOff, bOff, lvlTxt]);
+
+      /* Pop: chromatic twins rush in, main text follows */
+      this.tweens.add({ targets: [rOff, bOff], scaleX: 1, scaleY: 1, duration: 180, ease: 'Back.Out(2)' });
+      this.time.delayedCall(70, () => {
+        this.tweens.add({
+          targets: lvlTxt, scaleX: 1, scaleY: 1, alpha: 1,
+          duration: 220, ease: 'Back.Out(1.7)',
+        });
+        /* Chromatic copies converge and fade */
+        this.tweens.add({
+          targets: [rOff, bOff], x: 0, alpha: 0,
+          duration: 280, ease: 'Cubic.Out',
+        });
+      });
+
+      /* Dash separator grows in below */
+      const dash = this.add.rectangle(0, 66, 0, 2, col, 0.5);
+      this.levelBannerContainer.add(dash);
+      this.tweens.add({ targets: dash, width: 260, duration: 280, delay: 140, ease: 'Cubic.Out' });
+
+      /* Exit */
+      this.time.delayedCall(1050, () => this._exitBanner(CY));
+    }
+  }
+
+  private _exitBanner(fromY: number) {
     this.tweens.add({
       targets: this.levelBannerContainer,
-      alpha: 1, scaleX: 1, scaleY: 1,
-      duration: 220, ease: 'Back.Out',
-      onComplete: () => {
-        this.time.delayedCall(holdMs, () => {
-          this.tweens.add({
-            targets: this.levelBannerContainer,
-            alpha: 0, scaleX: 1.1, scaleY: 1.1,
-            duration: 300,
-          });
-        });
-      },
+      alpha: 0,
+      y: fromY - 55,
+      duration: 320,
+      ease: 'Cubic.In',
     });
   }
 
