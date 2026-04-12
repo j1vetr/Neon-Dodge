@@ -356,7 +356,7 @@ export class GameScene extends Phaser.Scene {
     const doubleActive = now < this.doubleUntil;
     /* Base pts/s rises with level: 15 / 20 / 25 / 30 / 35 */
     const basePtsPerSec = 15 + this.currentLevel * 5;
-    this.score += (dt / 1000) * basePtsPerSec * this.comboMultiplier * (doubleActive ? 2 : 1);
+    this.score += dt * basePtsPerSec * this.comboMultiplier * (doubleActive ? 2 : 1);
     const displayNow = Math.floor(this.score);
     if (displayNow !== this.scoreDisplay) {
       this.scoreDisplay = displayNow;
