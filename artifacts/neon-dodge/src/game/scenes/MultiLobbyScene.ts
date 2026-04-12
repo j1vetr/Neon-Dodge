@@ -181,65 +181,93 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     ENTRY PANEL
+     ENTRY PANEL  — premium redesign
   -------------------------------------------------------- */
   private _buildEntryPanel() {
     const c = this.add.container(0, 0);
     this.entryContainer = c;
 
-    /* Başlık */
-    c.add(this.add.text(CX, 140, '🌐 ÇOK OYUNCULU', {
-      fontSize: '48px', fontFamily: '"Orbitron", monospace',
-      color: '#00ffff',
-      stroke: '#003366', strokeThickness: 4,
-      shadow: { color: '#00ffff', blur: 24, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
+    /* ── Başlık ── */
+    c.add(this.add.text(CX, 110, '⬡  ÇOK OYUNCULU', {
+      fontSize: '46px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
+      color: '#ff8800',
+      stroke: '#3a1800', strokeThickness: 4,
+      shadow: { color: '#ff7700', blur: 28, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5));
 
-    /* Durum */
-    this.statusTxt = this.add.text(CX, 210, 'Sunucuya bağlanılıyor...', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#446655',
+    /* Durum satırı */
+    this.statusTxt = this.add.text(CX, 178, 'Sunucuya bağlanılıyor...', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#55443a',
     }).setOrigin(0.5).setDepth(1);
     c.add(this.statusTxt);
 
-    /* Ad alanı */
-    c.add(this.add.text(CX, 310, 'OYUNCU ADI (maks 8)', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#446655',
-    }).setOrigin(0.5));
+    /* Ayırıcı */
+    const div1 = this.add.graphics();
+    div1.lineStyle(1, 0xff7700, 0.18);
+    div1.lineBetween(CX - 320, 210, CX + 320, 210);
+    c.add(div1);
 
-    /* DOM input */
-    this.nameDom = this.add.dom(CX, 370, 'input', `
-      width:260px; height:52px;
-      background:#0a1a2a; border:2px solid #00ffff;
-      border-radius:6px; color:#00ffff;
-      font-family:monospace; font-size:28px;
-      text-align:center; outline:none;
-      text-transform:uppercase;
+    /* ── Ad girişi ── */
+    c.add(this.add.text(CX - 140, 248, 'OYUNCU ADI', {
+      fontSize: '16px', fontFamily: 'monospace',
+      color: '#664422', letterSpacing: 3,
+    }).setOrigin(0, 0.5));
+
+    this.nameDom = this.add.dom(CX, 296, 'input', `
+      width:300px; height:58px;
+      background:#0d0e1c; border:none;
+      border-bottom:2px solid #ff7700;
+      color:#ff8800; font-family:monospace; font-size:30px;
+      text-align:center; outline:none; text-transform:uppercase;
+      letter-spacing:4px;
     `).setDepth(5);
     this.nameInput = this.nameDom.node as HTMLInputElement;
     this.nameInput.maxLength = 8;
     this.nameInput.placeholder = 'ADI';
     c.add(this.nameDom);
 
-    /* Skin seçici */
-    c.add(this.add.text(CX, 450, 'ROKETİNİ SEÇ', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#446655',
-    }).setOrigin(0.5));
+    /* ── Skin seçici ── */
+    const div2 = this.add.graphics();
+    div2.lineStyle(1, 0xff7700, 0.18);
+    div2.lineBetween(CX - 320, 340, CX + 320, 340);
+    c.add(div2);
 
-    const skinSpacing = 110;
-    const skinStartX = CX - skinSpacing * 1.5;
+    c.add(this.add.text(CX - 140, 368, 'ROKETİNİ SEÇ', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#664422', letterSpacing: 3,
+    }).setOrigin(0, 0.5));
+
+    const skinSpacing = 148;
+    const skinStartX  = CX - skinSpacing * 1.5;
     for (let i = 0; i < 4; i++) {
       const sx = skinStartX + i * skinSpacing;
-      const sy = 530;
+      const sy = 448;
 
-      const border = this.add.rectangle(sx, sy, 90, 90, 0x00ffff, 0)
-        .setStrokeStyle(3, i === this.selectedSkin ? 0x00ffff : 0x224433, 1);
+      /* Arka plan kartı */
+      const bg = this.add.graphics();
+      bg.fillStyle(0x100a04, 0.6);
+      bg.fillRoundedRect(sx - 44, sy - 44, 88, 88, 14);
+      c.add(bg);
+
+      /* Seçim çerçevesi */
+      const border = this.add.rectangle(sx, sy, 88, 88, 0, 0)
+        .setStrokeStyle(i === this.selectedSkin ? 3 : 1.5,
+                         i === this.selectedSkin ? 0xff7700 : 0x332211, 1);
       this.skinBorders.push(border);
       c.add(border);
 
+      /* Roket görseli */
       const img = this.add.image(sx, sy, SKIN_KEYS[i])
-        .setDisplaySize(70, 70).setAlpha(i === this.selectedSkin ? 1 : 0.4);
+        .setDisplaySize(62, 72).setAlpha(i === this.selectedSkin ? 1 : 0.35);
       this.skinFrames.push(img);
       c.add(img);
+
+      /* Seçim glow halesi */
+      const glow = this.add.graphics();
+      glow.lineStyle(12, 0xff7700, 0.08);
+      glow.strokeRoundedRect(sx - 52, sy - 52, 104, 104, 18);
+      glow.setAlpha(i === this.selectedSkin ? 1 : 0);
+      c.add(glow);
+      (border as any).__glow = glow;
 
       border.setInteractive({ useHandCursor: true });
       border.on('pointerdown', () => this._selectSkin(i));
@@ -247,160 +275,240 @@ export class MultiLobbyScene extends Phaser.Scene {
       img.on('pointerdown', () => this._selectSkin(i));
     }
 
-    /* "ODA OLUŞTUR" butonu */
-    const btn1 = this._makeBtn(CX - 130, 660, 'ODA OLUŞTUR', 0x00ffff, () => {
+    const div3 = this.add.graphics();
+    div3.lineStyle(1, 0xff7700, 0.18);
+    div3.lineBetween(CX - 320, 515, CX + 320, 515);
+    c.add(div3);
+
+    /* ── Aksiyon butonları ── */
+    const createBtn = this._makeBtn(CX, 600, '◈  ODA OLUŞTUR', 0x00e5ff, () => {
       const name = this.nameInput.value.toUpperCase().trim() || 'PLAYER';
       const skin = SKIN_KEYS[this.selectedSkin];
       getSocket().emit('create-room', { name, skin });
-    });
-    c.add(btn1);
+    }, { w: 620, h: 84, fontSize: '28px' });
+    c.add(createBtn);
 
-    /* "ODAYA GİR" butonu */
-    const btn2 = this._makeBtn(CX + 130, 660, 'ODAYA GİR', 0xff8800, () => {
+    const joinBtn = this._makeBtn(CX, 712, '⬡  ODAYA GİR', 0xff7700, () => {
       this.joinPanel.setVisible(true);
       this.joinCodeInput.focus();
-    });
-    c.add(btn2);
+    }, { w: 620, h: 84, fontSize: '28px' });
+    c.add(joinBtn);
 
-    /* ── JOIN code alt panel ── */
+    /* ── JOIN kod paneli (overlay) ── */
     this.joinPanel = this.add.container(0, 0);
     this.joinPanel.setVisible(false);
     c.add(this.joinPanel);
 
-    const panelBg = this.add.rectangle(CX, 800, 400, 200, 0x0a1a2a, 0.95)
-      .setStrokeStyle(2, 0xff8800, 1);
-    this.joinPanel.add(panelBg);
+    /* Karartma arka planı */
+    const overlay = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.72);
+    this.joinPanel.add(overlay);
 
-    this.joinPanel.add(this.add.text(CX, 730, 'ODA KODUNU GİR', {
-      fontSize: '26px', fontFamily: 'monospace', color: '#ff8800',
+    /* Panel kartı */
+    const panelCard = this.add.graphics();
+    panelCard.fillStyle(0x0a0812, 0.98);
+    panelCard.fillRoundedRect(CX - 280, 480, 560, 340, 24);
+    panelCard.lineStyle(2, 0xff7700, 0.7);
+    panelCard.strokeRoundedRect(CX - 280, 480, 560, 340, 24);
+    panelCard.lineStyle(3, 0xff7700, 1);
+    panelCard.lineBetween(CX - 256, 482, CX + 256, 482);
+    this.joinPanel.add(panelCard);
+
+    this.joinPanel.add(this.add.text(CX, 524, 'ODA KODUNU GİR', {
+      fontSize: '22px', fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold', color: '#ff8800', letterSpacing: 3,
     }).setOrigin(0.5));
 
-    this.joinCodeDom = this.add.dom(CX, 790, 'input', `
-      width:220px; height:52px;
-      background:#0a1a2a; border:2px solid #ff8800;
-      border-radius:6px; color:#ff8800;
-      font-family:monospace; font-size:32px;
-      text-align:center; outline:none;
-      text-transform:uppercase;
-    `).setDepth(5);
+    this.joinCodeDom = this.add.dom(CX, 614, 'input', `
+      width:220px; height:60px;
+      background:transparent; border:none;
+      border-bottom:3px solid #ff7700;
+      color:#ff8800; font-family:"Orbitron", monospace;
+      font-size:38px; text-align:center; outline:none;
+      text-transform:uppercase; letter-spacing:8px;
+    `).setDepth(10);
     this.joinCodeInput = this.joinCodeDom.node as HTMLInputElement;
     this.joinCodeInput.maxLength = 5;
     this.joinCodeInput.placeholder = 'XXXXX';
     this.joinPanel.add(this.joinCodeDom);
 
-    const katil = this._makeBtn(CX - 70, 870, 'KATIL', 0xff8800, () => {
-      const code  = this.joinCodeInput.value.toUpperCase().trim();
-      const name  = this.nameInput.value.toUpperCase().trim() || 'PLAYER';
-      const skin  = SKIN_KEYS[this.selectedSkin];
+    const katil = this._makeBtn(CX - 130, 730, 'KATIL', 0xff7700, () => {
+      const code = this.joinCodeInput.value.toUpperCase().trim();
+      const name = this.nameInput.value.toUpperCase().trim() || 'PLAYER';
+      const skin = SKIN_KEYS[this.selectedSkin];
       if (code.length < 3) return;
       getSocket().emit('join-room', { code, name, skin });
-    });
+    }, { w: 210, h: 68 });
     this.joinPanel.add(katil);
 
-    const iptal = this._makeBtn(CX + 70, 870, 'İPTAL', 0x445566, () => {
+    const iptal = this._makeBtn(CX + 130, 730, 'İPTAL', 0x667799, () => {
       this.joinPanel.setVisible(false);
-    });
+    }, { w: 210, h: 68 });
     this.joinPanel.add(iptal);
 
-    /* Geri */
-    c.add(this._makeBtn(CX, H * 0.88, '← MENÜYE DÖN', 0x446655, () => {
+    /* ── Geri ── */
+    c.add(this._makeBtn(CX, H - 100, '← ANA MENÜ', 0x998866, () => {
       disconnectSocket();
       this.scene.start('StartScene');
-    }));
+    }, { w: 320, h: 58, fontSize: '20px' }));
   }
 
   /* --------------------------------------------------------
-     WAITING PANEL
+     WAITING PANEL — premium redesign
   -------------------------------------------------------- */
   private _buildWaitingPanel() {
     const c = this.add.container(0, 0);
     this.waitingContainer = c;
 
-    c.add(this.add.text(CX, 100, 'BEKLEME ODASI', {
-      fontSize: '42px', fontFamily: '"Orbitron", monospace',
-      color: '#00ffff', stroke: '#003366', strokeThickness: 3,
+    /* ── Başlık ── */
+    c.add(this.add.text(CX, 92, 'BEKLEME ODASI', {
+      fontSize: '40px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
+      color: '#00e5ff',
+      stroke: '#003344', strokeThickness: 3,
+      shadow: { color: '#00ffff', blur: 22, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5));
 
-    /* Kod alanı */
-    c.add(this.add.text(CX, 188, 'ODA KODU', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#446655',
+    /* ── Kod bloğu ── */
+    const codeCardG = this.add.graphics();
+    codeCardG.fillStyle(0x001a22, 0.8);
+    codeCardG.fillRoundedRect(CX - 280, 130, 560, 160, 20);
+    codeCardG.lineStyle(2, 0x00e5ff, 0.5);
+    codeCardG.strokeRoundedRect(CX - 280, 130, 560, 160, 20);
+    codeCardG.lineStyle(3, 0x00e5ff, 1);
+    codeCardG.lineBetween(CX - 256, 132, CX + 256, 132);
+    c.add(codeCardG);
+
+    c.add(this.add.text(CX, 158, 'ODA KODU', {
+      fontSize: '16px', fontFamily: 'monospace', color: '#225566', letterSpacing: 4,
     }).setOrigin(0.5));
 
-    this.waitCodeTxt = this.add.text(CX, 260, '-----', {
-      fontSize: '72px', fontFamily: '"Orbitron", monospace',
-      color: '#00ffff',
-      stroke: '#003366', strokeThickness: 4,
-      shadow: { color: '#00ffff', blur: 20, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
+    this.waitCodeTxt = this.add.text(CX, 224, '- - - - -', {
+      fontSize: '60px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
+      color: '#00e5ff', letterSpacing: 8,
+      shadow: { color: '#00ffff', blur: 18, stroke: false, fill: true, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
     c.add(this.waitCodeTxt);
 
-    /* Kopyala */
-    const copyBtn = this._makeBtn(CX, 340, '📋 KOPYALA', 0x446655, () => {
+    /* Kopyala butonu */
+    const copyBtn = this._makeBtn(CX, 312, '⎘  KOPYALA', 0x2299bb, () => {
       navigator.clipboard?.writeText(roomState.code).catch(() => {});
-      (copyBtn.getByName('label') as Phaser.GameObjects.Text | null)?.setText('✓ KOPYALANDI');
-      this.time.delayedCall(2000, () => (copyBtn.getByName('label') as Phaser.GameObjects.Text | null)?.setText('📋 KOPYALA'));
-    });
+      (copyBtn.getByName('label') as Phaser.GameObjects.Text | null)?.setText('✓  KOPYALANDI');
+      this.time.delayedCall(2000, () =>
+        (copyBtn.getByName('label') as Phaser.GameObjects.Text | null)?.setText('⎘  KOPYALA'));
+    }, { w: 220, h: 52, fontSize: '20px' });
     c.add(copyBtn);
 
-    /* Player list area */
-    c.add(this.add.text(CX, 410, 'OYUNCULAR', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#446655',
-    }).setOrigin(0.5));
+    /* ── Oyuncu listesi ── */
+    const div = this.add.graphics();
+    div.lineStyle(1, 0x00e5ff, 0.15);
+    div.lineBetween(CX - 300, 352, CX + 300, 352);
+    c.add(div);
 
-    /* Slotlar - 8 adet */
+    c.add(this.add.text(60, 372, 'OYUNCULAR', {
+      fontSize: '15px', fontFamily: 'monospace', color: '#224433', letterSpacing: 3,
+    }));
+
     for (let i = 0; i < 8; i++) {
-      const txt = this.add.text(CX - 180, 450 + i * 68, '', {
-        fontSize: '28px', fontFamily: 'monospace', color: '#224433',
+      const rowY = 408 + i * 72;
+      /* Satır arka planı */
+      const rowBg = this.add.graphics();
+      rowBg.fillStyle(0x001a0f, 0.0);
+      rowBg.fillRoundedRect(50, rowY - 26, W - 100, 52, 10);
+      c.add(rowBg);
+
+      const txt = this.add.text(90, rowY, '', {
+        fontSize: '26px', fontFamily: 'monospace', color: '#1a3322',
       }).setOrigin(0, 0.5);
       this.playerListTxts.push(txt);
       c.add(txt);
     }
 
-    /* Başlat butonu (sadece host görür) */
-    this.startBtn = this._makeBtn(CX, H * 0.86, 'OYUNU BAŞLAT', 0x00ff88, () => {
+    const div2 = this.add.graphics();
+    div2.lineStyle(1, 0x00e5ff, 0.15);
+    div2.lineBetween(CX - 300, 990, CX + 300, 990);
+    c.add(div2);
+
+    /* ── Başlat butonu ── */
+    this.startBtn = this._makeBtn(CX, 1088, '▶  OYUNU BAŞLAT', 0x00ff88, () => {
       getSocket().emit('start-game');
-    });
+    }, { w: 640, h: 90, fontSize: '30px' });
     c.add(this.startBtn);
     this.startBtnLabel = this.startBtn.getByName('label') as Phaser.GameObjects.Text;
 
-    /* Çık */
-    c.add(this._makeBtn(CX, H * 0.93, '← ÇIKIŞ', 0x446655, () => {
+    /* ── Çık ── */
+    c.add(this._makeBtn(CX, H - 100, '← ÇIKIŞ', 0x7766aa, () => {
       disconnectSocket();
       this.scene.start('StartScene');
-    }));
+    }, { w: 320, h: 58, fontSize: '20px' }));
   }
 
   /* --------------------------------------------------------
-     RESULTS PANEL
+     RESULTS PANEL — premium redesign
   -------------------------------------------------------- */
   private _buildResultsPanel() {
     const c = this.add.container(0, 0);
     this.resultsContainer = c;
 
-    c.add(this.add.text(CX, 120, '🏆 SONUÇLAR', {
-      fontSize: '52px', fontFamily: '"Orbitron", monospace',
-      color: '#ffcc00', stroke: '#664400', strokeThickness: 4,
+    /* ── Başlık ── */
+    c.add(this.add.text(CX, 100, '🏆  SONUÇLAR', {
+      fontSize: '50px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
+      color: '#ffcc00', stroke: '#443300', strokeThickness: 3,
+      shadow: { color: '#ffaa00', blur: 28, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5));
 
-    /* Sonuç slotları */
+    const divTop = this.add.graphics();
+    divTop.lineStyle(1, 0xffaa00, 0.25);
+    divTop.lineBetween(CX - 300, 148, CX + 300, 148);
+    c.add(divTop);
+
+    /* ── Sıralama satırları ── */
+    const ROW_H   = 84;
+    const ROW_PAD = 8;
+    const ROW_Y0  = 175;
     for (let i = 0; i < 8; i++) {
-      const txt = this.add.text(CX, 260 + i * 90, '', {
-        fontSize: '32px', fontFamily: 'monospace', color: '#ffffff',
+      const ry = ROW_Y0 + i * (ROW_H + ROW_PAD);
+      /* Satır kart arka planı */
+      const rowG = this.add.graphics();
+      if (i === 0) {
+        rowG.fillStyle(0x2a1800, 0.9);
+      } else if (i === 1) {
+        rowG.fillStyle(0x151a20, 0.9);
+      } else if (i === 2) {
+        rowG.fillStyle(0x0e140e, 0.9);
+      } else {
+        rowG.fillStyle(0x080c14, 0.7);
+      }
+      rowG.fillRoundedRect(50, ry, W - 100, ROW_H, 14);
+      if (i < 3) {
+        const borderCols = [0xffcc00, 0xaabccc, 0xcc7733];
+        rowG.lineStyle(2, borderCols[i], 0.6);
+        rowG.strokeRoundedRect(50, ry, W - 100, ROW_H, 14);
+      }
+      c.add(rowG);
+
+      const txt = this.add.text(CX, ry + ROW_H / 2, '', {
+        fontSize: i === 0 ? '30px' : '26px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
       }).setOrigin(0.5);
       this.resultsListTxts.push(txt);
       c.add(txt);
     }
 
-    c.add(this._makeBtn(CX, H * 0.88, 'LOBİYE DÖN', 0x00ffff, () => {
-      getSocket().emit('return-to-lobby');
-      /* Hemen lobiye geç, server lobby-reset ile onaylar */
-      this._showPhase('waiting');
-    }));
+    const divBot = this.add.graphics();
+    divBot.lineStyle(1, 0xffaa00, 0.15);
+    divBot.lineBetween(CX - 300, 1060, CX + 300, 1060);
+    c.add(divBot);
 
-    c.add(this._makeBtn(CX, H * 0.94, '← MENÜ', 0x446655, () => {
+    /* ── Butonlar ── */
+    c.add(this._makeBtn(CX, 1150, '↩  LOBİYE DÖN', 0x00e5ff, () => {
+      getSocket().emit('return-to-lobby');
+      this._showPhase('waiting');
+    }, { w: 560, h: 84, fontSize: '28px' }));
+
+    c.add(this._makeBtn(CX, 1268, '← ANA MENÜ', 0x7766aa, () => {
       disconnectSocket();
       this.scene.start('StartScene');
-    }));
+    }, { w: 400, h: 64, fontSize: '22px' }));
   }
 
   /* --------------------------------------------------------
@@ -410,11 +518,18 @@ export class MultiLobbyScene extends Phaser.Scene {
     for (let i = 0; i < this.resultsListTxts.length; i++) {
       const r = results[i];
       if (!r) { this.resultsListTxts[i].setText(''); continue; }
-      const medal = i < 3 ? MEDALS[i] + ' ' : `${i + 1}. `;
-      const isMe = r.id === roomState.myId ? ' ◄' : '';
-      const hex = colorHex(r.color);
-      this.resultsListTxts[i].setText(`${medal}${r.name.padEnd(8)}  ${Math.floor(r.score)}`);
-      this.resultsListTxts[i].setStyle({ color: i === 0 ? '#ffcc00' : hex });
+      const rankIcon  = i < 3 ? MEDALS[i] : `  ${i + 1}.`;
+      const meTag     = r.id === roomState.myId ? ' ◄' : '  ';
+      const scorePart = String(Math.floor(r.score)).padStart(6, ' ');
+      const namePart  = r.name.padEnd(9);
+      const line      = `${rankIcon}  ${namePart}  ${scorePart}${meTag}`;
+      this.resultsListTxts[i].setText(line);
+      const colors = ['#ffcc00', '#c8d8e0', '#cc8833'];
+      const col    = i < 3 ? colors[i] : colorHex(r.color);
+      this.resultsListTxts[i].setStyle({
+        color: col,
+        fontSize: i === 0 ? '30px' : '26px',
+      });
     }
     roomState.results = results;
   }
@@ -433,10 +548,11 @@ export class MultiLobbyScene extends Phaser.Scene {
         this.playerListTxts[i].setText('');
         continue;
       }
-      const hostTag = p.isHost ? ' 👑' : '';
-      const meTag   = p.id === roomState.myId ? ' (ben)' : '';
-      this.playerListTxts[i].setText(`● ${p.name}${hostTag}${meTag}`);
-      this.playerListTxts[i].setStyle({ color: colorHex(p.color) });
+      const hostTag = p.isHost ? ' 👑' : '   ';
+      const meTag   = p.id === roomState.myId ? ' ◄' : '  ';
+      const label   = `■  ${p.name.padEnd(8)}${hostTag}${meTag}`;
+      this.playerListTxts[i].setText(label);
+      this.playerListTxts[i].setStyle({ color: colorHex(p.color), alpha: 1 });
     }
 
     /* Başlat butonu: sadece host + en az 1 oyuncu */
@@ -470,32 +586,61 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _selectSkin(i: number) {
     this.selectedSkin = i;
     for (let j = 0; j < 4; j++) {
-      this.skinBorders[j].setStrokeStyle(3, j === i ? 0x00ffff : 0x224433, 1);
-      this.skinFrames[j].setAlpha(j === i ? 1 : 0.4);
+      const sel = j === i;
+      this.skinBorders[j].setStrokeStyle(sel ? 3 : 1.5, sel ? 0xff7700 : 0x332211, 1);
+      this.skinFrames[j].setAlpha(sel ? 1 : 0.35);
+      const glow = (this.skinBorders[j] as any).__glow as Phaser.GameObjects.Graphics | undefined;
+      if (glow) glow.setAlpha(sel ? 1 : 0);
     }
     localStorage.setItem(STORAGE_SKIN, String(i));
   }
 
   /* --------------------------------------------------------
-     YARDIMCI: Buton yap
+     YARDIMCI: Buton yap — premium versiyon
   -------------------------------------------------------- */
   private _makeBtn(
     x: number, y: number, label: string, color: number,
     cb: () => void,
+    opts?: { w?: number; h?: number; fontSize?: string },
   ): Phaser.GameObjects.Container {
-    const bg = this.add.rectangle(0, 0, 280, 64, color, 0.15)
-      .setStrokeStyle(2, color, 0.8);
+    const bw = opts?.w ?? 320;
+    const bh = opts?.h ?? 68;
+    const fs = opts?.fontSize ?? '24px';
+    const hx = colorHex(color);
+
+    /* Arka dolgu */
+    const bg = this.add.graphics();
+    const _bg = (a: number) => {
+      bg.clear();
+      bg.fillStyle(color, a);
+      bg.fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 14);
+    };
+    _bg(0.10);
+
+    /* Kenar çizgisi */
+    const border = this.add.graphics();
+    border.lineStyle(2, color, 0.72);
+    border.strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 14);
+
+    /* Üst vurgu */
+    const topLine = this.add.graphics();
+    topLine.lineStyle(2, color, 0.9);
+    topLine.lineBetween(-bw / 2 + 18, -bh / 2 + 1, bw / 2 - 18, -bh / 2 + 1);
+
+    /* Etiket */
     const txt = this.add.text(0, 0, label, {
-      fontSize: '26px', fontFamily: 'monospace',
-      color: colorHex(color),
+      fontSize: fs, fontFamily: '"Orbitron", monospace',
+      fontStyle: 'bold', color: hx,
     }).setOrigin(0.5).setName('label');
-    const hit = this.add.rectangle(0, 0, 280, 64, 0xffffff, 0)
+
+    /* Hit */
+    const hit = this.add.rectangle(0, 0, bw, bh, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
     hit.on('pointerdown', cb);
-    hit.on('pointerover', () => bg.setFillStyle(color, 0.28));
-    hit.on('pointerout',  () => bg.setFillStyle(color, 0.15));
-    const c = this.add.container(x, y, [bg, txt, hit]);
-    return c;
+    hit.on('pointerover', () => _bg(0.22));
+    hit.on('pointerout',  () => _bg(0.10));
+
+    return this.add.container(x, y, [bg, border, topLine, txt, hit]);
   }
 
   /* --------------------------------------------------------

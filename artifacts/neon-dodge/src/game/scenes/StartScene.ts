@@ -84,8 +84,7 @@ export class StartScene extends Phaser.Scene {
 
     this._buildBestScore();
     this._buildMainCard();
-    this._buildPlayButton();
-    this._buildMultiBtn();
+    this._buildModeCards();
     this._buildSettingsBtn();
     this._buildSettingsPanel();
   }
@@ -507,100 +506,110 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     PLAY BUTTON — full-width, Orbitron, neon pulse
+     MODE CARDS  (Solo + Multiplayer — yan yana premium kartlar)
   -------------------------------------------------------- */
-  private _buildPlayButton() {
-    const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const CX = W / 2;
-    const cy  = H * 0.787;
-    const BW  = W - 72;
-    const BH  = 116;
+  private _buildModeCards() {
+    const W = GAME_WIDTH, H = GAME_HEIGHT, CX = W / 2;
+    const cy  = H * 0.826;   // 1156.4 px
+    const BH  = 150;
+    const BW  = 342;
+    const GAP = 20;
+    const lcx = CX - BW / 2 - GAP / 2;  // 219
+    const rcx = CX + BW / 2 + GAP / 2;  // 581
 
-    /* Glow aura */
-    const aura = this.add.graphics();
-    aura.lineStyle(28, 0x00ffff, 0.05);
-    aura.strokeRoundedRect(CX - BW/2 - 14, cy - BH/2 - 14, BW+28, BH+28, 28);
-    aura.lineStyle(10, 0x00ffff, 0.1);
-    aura.strokeRoundedRect(CX - BW/2 - 4, cy - BH/2 - 4, BW+8, BH+8, 24);
+    const _card = (
+      cx: number,
+      col: number,
+      hexStr: string,
+      icon: string,
+      titleStr: string,
+      subStr: string,
+      delay: number,
+      cb: () => void,
+    ) => {
+      const lx = cx - BW / 2;
+      const ty = cy - BH / 2;
 
-    /* Fill + border */
-    const fill   = this.add.graphics();
-    fill.fillStyle(0x00ffff, 0.07);
-    fill.fillRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 20);
+      /* Dış neon halo */
+      const glow = this.add.graphics();
+      glow.lineStyle(26, col, 0.04);
+      glow.strokeRoundedRect(lx - 13, ty - 13, BW + 26, BH + 26, 28);
+      glow.lineStyle(8,  col, 0.10);
+      glow.strokeRoundedRect(lx - 4,  ty - 4,  BW + 8,  BH + 8,  24);
 
-    const border = this.add.graphics();
-    border.lineStyle(4, 0x00ffff, 1);
-    border.strokeRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 20);
+      /* Dolgu */
+      const fill = this.add.graphics();
+      const _fill = (a: number) => {
+        fill.clear();
+        fill.fillStyle(col, a);
+        fill.fillRoundedRect(lx, ty, BW, BH, 20);
+      };
+      _fill(0.06);
 
-    /* Label */
-    const label = this.add.text(CX, cy, t().play, {
-      fontSize: '44px',
-      fontFamily: '"Orbitron", monospace',
-      fontStyle: 'bold',
-      color: '#050510',
-      stroke: '#00ffff',
-      strokeThickness: 3,
-      shadow: { color: '#00ffff', blur: 20, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
-    }).setOrigin(0.5);
+      /* Kenar çizgisi */
+      const border = this.add.graphics();
+      border.lineStyle(2, col, 0.80);
+      border.strokeRoundedRect(lx, ty, BW, BH, 20);
 
-    /* Hit area */
-    const btn = this.add.rectangle(CX, cy, BW, BH, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true });
+      /* Üst vurgu çizgisi */
+      const topLine = this.add.graphics();
+      topLine.lineStyle(3, col, 1);
+      topLine.lineBetween(lx + 24, ty + 1.5, lx + BW - 24, ty + 1.5);
 
-    /* Pulse */
-    this.tweens.add({
-      targets: [fill, border], alpha: { from: 1, to: 0.4 },
-      duration: 980, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
-    this.tweens.add({
-      targets: label, alpha: { from: 1, to: 0.52 },
-      duration: 980, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 110,
-    });
-
-    const _start = () => {
-      localStorage.setItem(STORAGE_SKIN, String(this.selectedSkin));
+      /* Titreşimli halo */
       this.tweens.add({
-        targets: [border, fill, label], scaleX: 1.04, scaleY: 1.04, alpha: 1,
-        duration: 70, yoyo: true,
-        onComplete: () => this.scene.start('GameScene', { skin: this.selectedSkin }),
+        targets: glow, alpha: { from: 1, to: 0.35 },
+        duration: 1350, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay,
       });
+
+      /* Simge */
+      this.add.text(cx, cy - 36, icon, { fontSize: '34px' }).setOrigin(0.5);
+
+      /* Başlık */
+      const label = this.add.text(cx, cy + 12, titleStr, {
+        fontSize: '26px', fontFamily: '"Orbitron", monospace',
+        fontStyle: 'bold', color: hexStr,
+      }).setOrigin(0.5);
+
+      /* Alt bilgi */
+      this.add.text(cx, cy + 50, subStr, {
+        fontSize: '16px', fontFamily: 'monospace', color: hexStr,
+      }).setOrigin(0.5).setAlpha(0.40);
+
+      /* Hit */
+      const hit = this.add.rectangle(cx, cy, BW, BH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => _fill(0.16));
+      hit.on('pointerout',  () => _fill(0.06));
+      hit.on('pointerdown', () => {
+        this.tweens.add({
+          targets: [border, fill, label], scaleX: 0.96, scaleY: 0.96,
+          duration: 60, yoyo: true,
+          onComplete: () => {
+            localStorage.setItem(STORAGE_SKIN, String(this.selectedSkin));
+            cb();
+          },
+        });
+      });
+
+      void topLine;
     };
 
-    btn.on('pointerdown', _start);
-    label.setInteractive({ useHandCursor: true }).on('pointerdown', _start);
+    /* ── SOLO kartı ── */
+    _card(
+      lcx, 0x00ffff, '#00ffff',
+      '◈', t().play.replace('▶   ', ''), 'TEK KİŞİLİK',
+      0,
+      () => this.scene.start('GameScene', { skin: this.selectedSkin }),
+    );
 
-    void aura;
-  }
-
-  /* --------------------------------------------------------
-     ÇOKLOYUNCULU BUTTON
-  -------------------------------------------------------- */
-  private _buildMultiBtn() {
-    const W = GAME_WIDTH, H = GAME_HEIGHT, CX = W / 2;
-    const cy = H * 0.846;
-    const BW = W - 130, BH = 72;
-
-    const fill = this.add.graphics();
-    fill.fillStyle(0xff8800, 0.08);
-    fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14);
-
-    const border = this.add.graphics();
-    border.lineStyle(2, 0xff8800, 0.7);
-    border.strokeRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14);
-
-    this.add.text(CX, cy, '🌐  ÇOK OYUNCULU', {
-      fontSize: '30px', fontFamily: '"Orbitron", monospace',
-      color: '#ff8800', stroke: '#442200', strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    const hit = this.add.rectangle(CX, cy, BW, BH, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true });
-    hit.on('pointerover',  () => { fill.clear(); fill.fillStyle(0xff8800, 0.18); fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14); });
-    hit.on('pointerout',   () => { fill.clear(); fill.fillStyle(0xff8800, 0.08); fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14); });
-    hit.on('pointerdown',  () => {
-      localStorage.setItem('neonDodge_skin', String(this.selectedSkin));
-      this.scene.start('MultiLobbyScene');
-    });
+    /* ── ÇOK OYUNCULU kartı ── */
+    _card(
+      rcx, 0xff7700, '#ff8800',
+      '⬡', 'ÇOK OYUNCULU', '2 – 8 OYUNCU',
+      680,
+      () => this.scene.start('MultiLobbyScene'),
+    );
   }
 
   /* --------------------------------------------------------
@@ -608,7 +617,7 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _buildSettingsBtn() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const cx = W / 2, cy = H * 0.901;
+    const cx = W / 2, cy = H * 0.924;
     const SIZE = 76;
 
     /* PNG icon — tinted cyan, constant slow rotation */
