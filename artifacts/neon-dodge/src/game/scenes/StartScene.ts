@@ -85,6 +85,7 @@ export class StartScene extends Phaser.Scene {
     this._buildBestScore();
     this._buildMainCard();
     this._buildPlayButton();
+    this._buildMultiBtn();
     this._buildSettingsBtn();
     this._buildSettingsPanel();
   }
@@ -569,6 +570,37 @@ export class StartScene extends Phaser.Scene {
     label.setInteractive({ useHandCursor: true }).on('pointerdown', _start);
 
     void aura;
+  }
+
+  /* --------------------------------------------------------
+     ÇOKLOYUNCULU BUTTON
+  -------------------------------------------------------- */
+  private _buildMultiBtn() {
+    const W = GAME_WIDTH, H = GAME_HEIGHT, CX = W / 2;
+    const cy = H * 0.846;
+    const BW = W - 130, BH = 72;
+
+    const fill = this.add.graphics();
+    fill.fillStyle(0xff8800, 0.08);
+    fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14);
+
+    const border = this.add.graphics();
+    border.lineStyle(2, 0xff8800, 0.7);
+    border.strokeRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14);
+
+    this.add.text(CX, cy, '🌐  ÇOK OYUNCULU', {
+      fontSize: '30px', fontFamily: '"Orbitron", monospace',
+      color: '#ff8800', stroke: '#442200', strokeThickness: 2,
+    }).setOrigin(0.5);
+
+    const hit = this.add.rectangle(CX, cy, BW, BH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on('pointerover',  () => { fill.clear(); fill.fillStyle(0xff8800, 0.18); fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14); });
+    hit.on('pointerout',   () => { fill.clear(); fill.fillStyle(0xff8800, 0.08); fill.fillRoundedRect(CX - BW / 2, cy - BH / 2, BW, BH, 14); });
+    hit.on('pointerdown',  () => {
+      localStorage.setItem('neonDodge_skin', String(this.selectedSkin));
+      this.scene.start('MultiLobbyScene');
+    });
   }
 
   /* --------------------------------------------------------

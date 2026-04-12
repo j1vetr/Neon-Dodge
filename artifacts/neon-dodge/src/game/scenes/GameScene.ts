@@ -22,6 +22,9 @@ import {
 } from '../constants';
 import { t } from '../i18n';
 import {
+  getSocket, sendPosThrottled, roomState, colorHex,
+} from '../multiState';
+import {
   playTap, playHit, playScore,
   playCombo, playNearMiss, playPowerUp, playShieldHit,
   startAmbient, updateAmbientLevel, stopAmbient,
@@ -145,7 +148,21 @@ export class GameScene extends Phaser.Scene {
     maxCombo: number;
   } = { active: false, score: 0, level: 0, elapsedTime: 0, maxCombo: 0 };
 
-  init(data: { skin?: number; revive?: boolean; score?: number; level?: number; elapsedTime?: number; maxCombo?: number }) {
+  /* ── Multiplayer ── */
+  private multiMode = false;
+  private multiCode = '';
+  private multiDots = new Map<string, {
+    dot:  Phaser.GameObjects.Arc;
+    label: Phaser.GameObjects.Text;
+  }>();
+  private multiWaitOverlay!: Phaser.GameObjects.Container;
+  private multiWaitTxt!:     Phaser.GameObjects.Text;
+
+  init(data: {
+    skin?: number; revive?: boolean; score?: number;
+    level?: number; elapsedTime?: number; maxCombo?: number;
+    multi?: boolean; myId?: string; myColor?: number; code?: string;
+  }) {
     this.skinIndex = data?.skin ?? 0;
     this.playerColor = SKINS[this.skinIndex].color;
     this.reviveData = {
@@ -155,6 +172,12 @@ export class GameScene extends Phaser.Scene {
       elapsedTime: data?.elapsedTime ?? 0,
       maxCombo:    data?.maxCombo ?? 0,
     };
+    this.multiMode = data?.multi ?? false;
+    this.multiCode = data?.code ?? '';
+    if (this.multiMode) {
+      roomState.myId    = data?.myId ?? '';
+      roomState.myColor = data?.myColor ?? 0x00ffff;
+    }
   }
 
   /* ── Smooth interpolation ── */
@@ -325,6 +348,12 @@ export class GameScene extends Phaser.Scene {
 
     this._updateLevelLabel();
     startAmbient(this.reviveData.active ? this.currentLevel : 0);
+
+    /* Multiplayer başlatma */
+    if (this.multiMode) {
+      this._buildMultiOverlay();
+      this._bindMultiSocket();
+    }
   }
 
   /* --------------------------------------------------------
@@ -466,6 +495,11 @@ export class GameScene extends Phaser.Scene {
 
     /* Power-up timer HUD */
     this._updatePowerUpHUD(now);
+
+    /* Multiplayer: pozisyon gönder + diğer dotları güncelle */
+    if (this.multiMode) {
+      sendPosThrottled(this.player.x, this.player.y, this.score);
+    }
   }
 
   /* --------------------------------------------------------
@@ -1141,14 +1175,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(900, () => {
-      this.scene.start('GameOverScene', {
-        score: Math.floor(this.score),
-        best: this.highScore,
-        skin: this.skinIndex,
-        level: this.currentLevel + 1,
-        maxCombo: this.maxCombo,
-        elapsedTime: Math.floor(this.elapsedTime),
-      });
+      if (this.multiMode) {
+        /* Çok oyunculu: ölümü bildir, bekleme ekranı göster */
+        getSocket().emit('player-dead', { score: Math.floor(this.score) });
+        this._showMultiWaitOverlay();
+      } else {
+        this.scene.start('GameOverScene', {
+          score: Math.floor(this.score),
+          best: this.highScore,
+          skin: this.skinIndex,
+          level: this.currentLevel + 1,
+          maxCombo: this.maxCombo,
+          elapsedTime: Math.floor(this.elapsedTime),
+        });
+      }
     });
   }
 
@@ -1257,5 +1297,110 @@ export class GameScene extends Phaser.Scene {
       .setDisplaySize(76, 84);
     const container = this.add.container(x, y, [img]);
     return container;
+  }
+
+  /* ========================================================
+     MULTIPLAYER
+  ======================================================== */
+
+  private _buildMultiOverlay() {
+    const W = GAME_WIDTH, H = GAME_HEIGHT, CX = W / 2;
+    const bg = this.add.rectangle(CX, H / 2, W, H, 0x000008, 0.84).setDepth(50);
+    const title = this.add.text(CX, H * 0.32, '⏳ DİĞERLERİ OYNUYOR...', {
+      fontSize: '36px', fontFamily: '"Orbitron", monospace',
+      color: '#00ffff', stroke: '#003366', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(51);
+
+    this.multiWaitTxt = this.add.text(CX, H * 0.48, '', {
+      fontSize: '28px', fontFamily: 'monospace', color: '#ffffff',
+      align: 'center', lineSpacing: 12,
+    }).setOrigin(0.5).setDepth(51);
+
+    this.multiWaitOverlay = this.add.container(0, 0, [bg, title, this.multiWaitTxt]);
+    this.multiWaitOverlay.setDepth(50).setVisible(false);
+  }
+
+  private _bindMultiSocket() {
+    const s = getSocket();
+
+    /* Diğer oyuncuların pozisyon güncellemeleri */
+    s.on('player-pos', ({ id, x, y, score: _s }: any) => {
+      if (id === roomState.myId) return;
+      let entry = this.multiDots.get(id);
+      if (!entry) {
+        const player = roomState.players.get(id);
+        const color = player?.color ?? 0xffffff;
+        const dot = this.add.circle(x, y, 10, color, 0.85).setDepth(11);
+        const name = player?.name?.slice(0, 3) ?? '???';
+        const label = this.add.text(x, y - 22, name, {
+          fontSize: '18px', fontFamily: 'monospace', color: colorHex(color),
+          stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5, 1).setDepth(12);
+        entry = { dot, label };
+        this.multiDots.set(id, entry);
+      }
+      entry.dot.setPosition(x, y);
+      entry.label.setPosition(x, y - 22);
+    });
+
+    /* Bir oyuncu öldü */
+    s.on('player-died', ({ id }: { id: string }) => {
+      const rp = roomState.players.get(id);
+      if (rp) rp.alive = false;
+      const entry = this.multiDots.get(id);
+      if (entry) {
+        entry.dot.setAlpha(0.15);
+        entry.label.setAlpha(0.3);
+      }
+      this._updateWaitText();
+    });
+
+    /* Oyun bitti — sonuçlara git */
+    s.on('game-over', ({ results }: { results: any[] }) => {
+      stopAmbient();
+      this.time.delayedCall(400, () => {
+        this.scene.start('MultiLobbyScene', {
+          phase: 'results',
+          results,
+        });
+      });
+    });
+
+    /* Bir oyuncu ayrıldı */
+    s.on('player-left', ({ id }: { id: string }) => {
+      roomState.players.delete(id);
+      const entry = this.multiDots.get(id);
+      if (entry) { entry.dot.destroy(); entry.label.destroy(); }
+      this.multiDots.delete(id);
+    });
+  }
+
+  private _showMultiWaitOverlay() {
+    if (this.multiWaitOverlay) {
+      this.multiWaitOverlay.setVisible(true);
+    }
+    this._updateWaitText();
+  }
+
+  private _updateWaitText() {
+    const alive = [...roomState.players.values()].filter(p => p.alive && p.id !== roomState.myId);
+    const lines = alive.map(p => `${p.name}  ${colorHex(p.color)}`);
+    if (this.multiWaitTxt) {
+      this.multiWaitTxt.setText(
+        alive.length > 0
+          ? 'Hâlâ oynayan:\n' + alive.map(p => p.name).join('  /  ')
+          : 'Herkes elendi...',
+      );
+    }
+    void lines;
+  }
+
+  shutdown() {
+    if (!this.multiMode) return;
+    const s = getSocket();
+    s.off('player-pos');
+    s.off('player-died');
+    s.off('game-over');
+    s.off('player-left');
   }
 }

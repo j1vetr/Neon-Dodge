@@ -11,6 +11,7 @@ import { LangScene } from './scenes/LangScene';
 import { StartScene } from './scenes/StartScene';
 import { GameScene } from './scenes/GameScene';
 import { GameOverScene } from './scenes/GameOverScene';
+import { MultiLobbyScene } from './scenes/MultiLobbyScene';
 import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG } from './constants';
 
 export function createGame(parent: HTMLElement): Phaser.Game {
@@ -20,7 +21,8 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     height: GAME_HEIGHT,
     backgroundColor: `#${COLOR_BG.toString(16).padStart(6, '0')}`,
     parent,
-    scene: [PreloadScene, LangScene, StartScene, GameScene, GameOverScene],
+    scene: [PreloadScene, LangScene, StartScene, GameScene, GameOverScene, MultiLobbyScene],
+    dom: { createContainer: true },
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
