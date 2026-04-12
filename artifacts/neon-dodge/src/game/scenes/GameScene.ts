@@ -92,7 +92,6 @@ export class GameScene extends Phaser.Scene {
   private elapsedTime = 0;
   private scoreTxt!: Phaser.GameObjects.Text;
   private highScore = 0;
-  private lastScoreSoundAt = 0; // for score sound throttle
 
   /* Power-up cooldown */
   private lastPowerUpTime = -99999; // ms since game start when last power-up spawned
@@ -263,7 +262,6 @@ export class GameScene extends Phaser.Scene {
     this.paused = false;
     this.score = 0;
     this.scoreDisplay = 0;
-    this.lastScoreSoundAt = 0;
     this.elapsedTime = 0;
     this.spawnTimer = 0;
     this.lastPowerUpTime = -99999;
@@ -361,11 +359,6 @@ export class GameScene extends Phaser.Scene {
     if (displayNow !== this.scoreDisplay) {
       this.scoreDisplay = displayNow;
       this.scoreTxt.setText(`${displayNow}`);
-      /* Score sound every 50 points */
-      if (displayNow - this.lastScoreSoundAt >= 50) {
-        this.lastScoreSoundAt = displayNow;
-        playScore(this.currentLevel);
-      }
     }
 
     /* ------- Player horizontal movement ------- */
