@@ -666,7 +666,7 @@ export class GameScene extends Phaser.Scene {
        kutucuk ve tint yok, orijinal renk korunuyor */
     const iconKey = type === 'shield' ? 'icon-shield' : 'icon-double';
     const icon = this.add.image(x, y, iconKey)
-      .setDisplaySize(80, 80)
+      .setDisplaySize(96, 96)
       .setDepth(7);
 
     this.powerUps.push({ icon, ring, type, collected: false });
