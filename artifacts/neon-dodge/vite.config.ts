@@ -3,14 +3,10 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { VitePWA } from "vite-plugin-pwa";
 
-// PORT is only needed for the dev/preview server, not for builds.
-// Default to 3000 so external builds don't fail.
 const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 3000;
-
-// BASE_PATH is the URL prefix. On Replit it's set automatically.
-// For standalone / self-hosted deployments default to "/".
 const basePath = process.env.BASE_PATH ?? "/";
 
 export default defineConfig({
@@ -19,6 +15,29 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: "script",
+      manifest: false,
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,png,jpg,jpeg,svg,ico,woff,woff2,mp3,ogg,wav}"],
+        navigateFallback: "/offline.html",
+        navigateFallbackDenylist: [/^\/\.well-known\//],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
