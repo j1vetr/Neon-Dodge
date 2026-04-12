@@ -17,7 +17,7 @@ import {
   COLOR_BG, COLOR_SHIELD, COLOR_DOUBLE,
   SKINS, STORAGE_HIGHSCORE, STORAGE_GAMES_PLAYED, STORAGE_TOTAL_TIME, STORAGE_MAX_COMBO,
   COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5,
-  NEAR_MISS_DISTANCE, NEAR_MISS_BONUS,
+  NEAR_MISS_DISTANCE, NEAR_MISS_WAVE_BONUS, BASE_WAVE_BONUS,
   POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_DOUBLE_DURATION,
 } from '../constants';
 import { t } from '../i18n';
@@ -73,7 +73,8 @@ export class GameScene extends Phaser.Scene {
   private spawnTimer = 0;
   private waveCounter = 0;
   private lastGapCenter = -1;
-  private passedWaveIds = new Set<number>();
+  private passedWaveIds    = new Set<number>();
+  private nearMissWaveIds  = new Set<number>(); /* bu wave'de near-miss olan waveId'ler */
 
   /* Power-ups */
   private powerUps: PowerUp[] = [];
@@ -287,6 +288,7 @@ export class GameScene extends Phaser.Scene {
     this.lastComboTier = 0;
     this.waveCounter = 0;
     this.passedWaveIds.clear();
+    this.nearMissWaveIds.clear();
     this.shieldActive = false;
     this.invincibleUntil = 0;
     this.doubleUntil = 0;
@@ -374,7 +376,7 @@ export class GameScene extends Phaser.Scene {
 
     /* Score */
     const doubleActive = now < this.doubleUntil;
-    const basePtsPerSec = (15 + this.currentLevel * 5) * 0.25;
+    const basePtsPerSec = (15 + this.currentLevel * 5) * 0.6;
     this.score += dt * basePtsPerSec * this.comboMultiplier * (doubleActive ? 2 : 1);
     const displayNow = Math.floor(this.score);
     if (displayNow !== this.scoreDisplay) {
@@ -705,10 +707,12 @@ export class GameScene extends Phaser.Scene {
      OBSTACLE UPDATE — near-miss + combo
   -------------------------------------------------------- */
   private _updateObstacles(dt: number, time: number) {
-    const rawSpeed = this._lerpNum('scrollSpeed');
-    const speed = rawSpeed;
-    const toRemove: number[] = [];
+    const speed     = this._lerpNum('scrollSpeed');
     const liveColor = this._lerpWallColor();
+    const toRemove: number[] = [];
+
+    /* ── Aşama 1: hareket + near-miss tespiti ── */
+    const justPassedWaves = new Set<number>();
 
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
@@ -718,27 +722,20 @@ export class GameScene extends Phaser.Scene {
       if (!obs.passed && obs.body.y > PLAYER_START_Y) {
         obs.passed = true;
 
+        /* Near-miss kontrolü — SADECE dolu pillar (laser değil) */
         if (!obs.isLaser) {
-          const nearX = Phaser.Math.Clamp(this.player.x, obs.body.x - obs.body.displayWidth / 2, obs.body.x + obs.body.displayWidth / 2);
+          const nearX = Phaser.Math.Clamp(
+            this.player.x,
+            obs.body.x - obs.body.displayWidth / 2,
+            obs.body.x + obs.body.displayWidth / 2,
+          );
           const distX = Math.abs(this.player.x - nearX);
           if (distX > 0 && distX < NEAR_MISS_DISTANCE) {
-            this._onNearMiss();
+            this.nearMissWaveIds.add(obs.waveId);
           }
         }
 
-        if (!this.passedWaveIds.has(obs.waveId)) {
-          this.passedWaveIds.add(obs.waveId);
-          this._incrementCombo();
-
-          const dbl = this.time.now < this.doubleUntil;
-          const pillarBonus = 25 * this.comboMultiplier * (dbl ? 2 : 1);
-          this.score += pillarBonus;
-          this.scoreDisplay = Math.floor(this.score);
-          this.scoreTxt.setText(`${this.scoreDisplay}`);
-
-          const popupColor = dbl ? '#ffcc00' : (this.comboMultiplier > 1 ? '#ff8800' : '#00ffcc');
-          this._showPopupText(`+${pillarBonus}`, popupColor);
-        }
+        justPassedWaves.add(obs.waveId);
       }
 
       if (obs.body.y > GAME_HEIGHT + 80) {
@@ -746,8 +743,44 @@ export class GameScene extends Phaser.Scene {
         toRemove.push(i);
       }
     }
-    toRemove.forEach(i => this.obstacles.splice(i, 1));
 
+    /* ── Aşama 2: wave başına combo kararı ── */
+    const dbl = this.time.now < this.doubleUntil;
+
+    for (const waveId of justPassedWaves) {
+      if (this.passedWaveIds.has(waveId)) continue;
+      this.passedWaveIds.add(waveId);
+
+      const isNearMiss = this.nearMissWaveIds.has(waveId);
+
+      if (isNearMiss) {
+        /* Yakın geçiş → combo artır */
+        playNearMiss();
+        this._incrementCombo();
+        const bonus = NEAR_MISS_WAVE_BONUS * this.comboMultiplier * (dbl ? 2 : 1);
+        this.score += bonus;
+        this.scoreDisplay = Math.floor(this.score);
+        this.scoreTxt.setText(`${this.scoreDisplay}`);
+        const comboTag = this.comboMultiplier > 1 ? ` ×${this.comboMultiplier}` : '';
+        const col = dbl ? '#ffcc00' : (this.comboMultiplier > 1 ? '#ff8800' : '#ff6600');
+        this._showPopupText(`+${bonus} YAKIN!${comboTag}`, col);
+      } else {
+        /* Güvenli geçiş → combo sıfırla */
+        const hadCombo = this.combo > 0;
+        this._resetCombo();
+        const bonus = BASE_WAVE_BONUS * (dbl ? 2 : 1);
+        this.score += bonus;
+        this.scoreDisplay = Math.floor(this.score);
+        this.scoreTxt.setText(`${this.scoreDisplay}`);
+        if (hadCombo) {
+          this._showPopupText(`+${bonus} combo bozuldu`, '#446655');
+        } else {
+          this._showPopupText(`+${bonus}`, '#00ffcc');
+        }
+      }
+    }
+
+    toRemove.forEach(i => this.obstacles.splice(i, 1));
     void time;
   }
 
@@ -833,19 +866,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     NEAR MISS
-  -------------------------------------------------------- */
-  private _onNearMiss() {
-    playNearMiss();
-    const bonus = NEAR_MISS_BONUS * (this.time.now < this.doubleUntil ? 2 : 1);
-    this.score += bonus;
-    this.scoreDisplay = Math.floor(this.score);
-    this.scoreTxt.setText(`${this.scoreDisplay}`);
-    this._showPopupText(`+${bonus} CLOSE!`, '#ff8800');
-  }
-
-  /* --------------------------------------------------------
-     COMBO
+     COMBO — Near-Miss Streak
   -------------------------------------------------------- */
   private _incrementCombo() {
     this.combo++;
@@ -859,19 +880,34 @@ export class GameScene extends Phaser.Scene {
 
     this.comboMultiplier = tier === 0 ? 1 : tier + 1;
 
-    if (tier > 0) {
-      this.comboHUD.setText(`×${this.comboMultiplier} COMBO`);
-      const colors = ['', '#ffcc00', '#ff8800', '#ff00ff', '#00ffff'];
-      this.comboHUD.setStyle({ color: colors[tier] });
-    } else {
-      this.comboHUD.setText('');
-    }
+    const colors   = ['#aaffcc', '#ffcc00', '#ff8800', '#ff00ff', '#00ffff'];
+    const nextGoal = [COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5, COMBO_X5]; /* tier → sonraki hedef */
+    const maxTier  = 4;
 
+    let hudText = '';
+    if (tier > 0) {
+      if (tier < maxTier) {
+        hudText = `×${this.comboMultiplier} COMBO  ${this.combo}/${nextGoal[tier]}`;
+      } else {
+        hudText = `×${this.comboMultiplier} COMBO  MAX!`;
+      }
+    }
+    this.comboHUD.setText(hudText);
+    if (tier > 0) this.comboHUD.setStyle({ color: colors[tier] });
+
+    /* Yeni tier'a geçince ses + popup */
     if (tier > this.lastComboTier) {
       this.lastComboTier = tier;
       playCombo(tier);
-      this._showPopupText(`×${this.comboMultiplier} COMBO!`, '#ffcc00');
+      this._showPopupText(`×${this.comboMultiplier} COMBO!`, colors[tier]);
     }
+  }
+
+  private _resetCombo() {
+    this.combo = 0;
+    this.comboMultiplier = 1;
+    this.lastComboTier = 0;
+    this.comboHUD.setText('');
   }
 
   /* --------------------------------------------------------

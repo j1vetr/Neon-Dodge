@@ -141,15 +141,16 @@ export const STORAGE_GAMES_PLAYED = 'neonDodge_gamesPlayed';
 export const STORAGE_TOTAL_TIME   = 'neonDodge_totalTime';
 export const STORAGE_MAX_COMBO    = 'neonDodge_maxCombo';
 
-/* Combo system */
-export const COMBO_X2 = 3;
-export const COMBO_X3 = 7;
-export const COMBO_X4 = 12;
-export const COMBO_X5 = 18;
+/* Combo system — Near-Miss Streak */
+export const COMBO_X2 = 2;   /* 2 yakın geçiş → ×2 */
+export const COMBO_X3 = 5;   /* 5 → ×3 */
+export const COMBO_X4 = 9;   /* 9 → ×4 */
+export const COMBO_X5 = 14;  /* 14 → ×5 */
 
 /* Near miss */
-export const NEAR_MISS_DISTANCE = 68;
-export const NEAR_MISS_BONUS    = 50;
+export const NEAR_MISS_DISTANCE    = 90;   /* yakın geçiş eşiği (px) */
+export const NEAR_MISS_WAVE_BONUS  = 60;   /* yakın geçiş puan bonusu × comboMultiplier */
+export const BASE_WAVE_BONUS       = 20;   /* güvenli geçiş baz puanı (combo sıfırlanır) */
 
 /* Power-ups */
 export const POWERUP_SIZE            = 28;
