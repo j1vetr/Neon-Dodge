@@ -17,7 +17,7 @@ export const STRINGS = {
   en: {
     noRecord:    'NO RECORD YET',
     selectSkin:  'SELECT SKIN',
-    skinNames:   ['KLASİK', 'NASA', 'TÜRK'],
+    skinNames:   ['CLASSIC', 'NASA', 'TURKISH', 'FOREST'],
     play:        '▶   PLAY',
     games:       'GAMES',
     totalTime:   'TOTAL TIME',
@@ -53,7 +53,7 @@ export const STRINGS = {
   tr: {
     noRecord:    'KAYIT YOK',
     selectSkin:  'KOSTÜM SEÇ',
-    skinNames:   ['KLASİK', 'NASA', 'TÜRK'],
+    skinNames:   ['KLASİK', 'NASA', 'TÜRK', 'ORMAN'],
     play:        '▶   OYNA',
     games:       'OYUN',
     totalTime:   'TOPLAM SÜRE',

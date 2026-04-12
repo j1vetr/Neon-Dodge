@@ -126,11 +126,12 @@ export const COLOR_TRAIL  = 0x00ffff;
 export const COLOR_SHIELD = 0x00aaff;
 export const COLOR_DOUBLE = 0xffcc00;
 
-/* Skins */
+/* Skins — name field artık sadece fallback, i18n.skinNames kullanılıyor */
 export const SKINS = [
   { name: 'KLASİK', key: 'skin-klasik', color: 0x00ffff, hex: '#00ffff' },
   { name: 'NASA',   key: 'skin-nasa',   color: 0x4499ff, hex: '#4499ff' },
   { name: 'TÜRK',   key: 'skin-turk',   color: 0xff3344, hex: '#ff3344' },
+  { name: 'ORMAN',  key: 'skin-orman',  color: 0x44dd88, hex: '#44dd88' },
 ];
 
 /* Storage keys */
