@@ -1079,7 +1079,7 @@ export class GameScene extends Phaser.Scene {
     ];
 
     const nx = this.player.x;
-    const ny = this.player.y + 44; /* rocket nozzle */
+    const ny = this.player.y + 32; /* rocket nozzle — roketin alt iç kısmı */
 
     for (const tier of tiers) {
       const r  = Phaser.Math.Between(tier.rMin, tier.rMax);

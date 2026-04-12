@@ -22,6 +22,17 @@ function _diamond(
   g.fillTriangle(x, y - r, x - r, y, x, y + r);
 }
 
+/* Module-level fire particle type (StartScene trail) */
+interface StartFireParticle {
+  circle: Phaser.GameObjects.Arc;
+  born: number;
+  lifetime: number;
+  vx: number;
+  vy: number;
+  startRadius: number;
+  maxAlpha: number;
+}
+
 /* =========================================================
    SCENE CLASS
    ========================================================= */
@@ -31,8 +42,8 @@ export class StartScene extends Phaser.Scene {
   private selectedSkin = 0;
   private floatingPlayer!: Phaser.GameObjects.Container;
   private floatingPlayerImg!: Phaser.GameObjects.Image;
-  private playerTrail: Phaser.GameObjects.Arc[] = [];
-  private playerTrailTimer = 0;
+  private fireParticles: StartFireParticle[] = [];
+  private fireTimer = 0;
 
   /* Title glitch */
   private glitchTimer  = 0;
@@ -81,21 +92,46 @@ export class StartScene extends Phaser.Scene {
   /* --------------------------------------------------------
      UPDATE
   -------------------------------------------------------- */
-  update(_time: number, delta: number) {
-    this.playerTrailTimer += delta;
-    if (this.playerTrailTimer > 55) {
-      this.playerTrailTimer = 0;
-      const skin = SKINS[this.selectedSkin];
-      const cols = [skin.color, 0xffffff, 0xff8800, 0xffff00];
-      const c    = cols[Math.floor(Math.random() * cols.length)];
-      const dot  = this.add.circle(
-        this.floatingPlayer.x + Phaser.Math.Between(-8, 8),
-        this.floatingPlayer.y + 54 + Phaser.Math.Between(0, 10),
-        Phaser.Math.Between(4, 8), c, 0.7,
-      );
-      this.playerTrail.push(dot);
-      if (this.playerTrail.length > 10) this.playerTrail.shift()?.destroy();
-      this.playerTrail.forEach((d, i) => d.setAlpha((i / this.playerTrail.length) * 0.38));
+  update(time: number, delta: number) {
+    /* ── Fire trail ─────────────────────────────────────── */
+    this.fireTimer += delta;
+    if (this.fireTimer > 35) {
+      this.fireTimer = 0;
+      /* rocket image is 104×120, nozzle at ~+50 from container center */
+      const nx = this.floatingPlayer.x;
+      const ny = this.floatingPlayer.y + 50;
+      const tiers = [
+        { col: 0xffffff, ba: 0.95, rMin: 2, rMax: 4,  vyMin: 55,  vyMax: 95,  vxR: 10, life: 190 },
+        { col: 0xffee22, ba: 0.88, rMin: 4, rMax: 7,  vyMin: 85,  vyMax: 140, vxR: 22, life: 310 },
+        { col: 0xff6600, ba: 0.72, rMin: 5, rMax: 9,  vyMin: 110, vyMax: 170, vxR: 34, life: 440 },
+        { col: 0xcc1100, ba: 0.45, rMin: 6, rMax: 12, vyMin: 135, vyMax: 200, vxR: 46, life: 600 },
+      ];
+      for (const tier of tiers) {
+        const r  = Phaser.Math.Between(tier.rMin, tier.rMax);
+        const vy = Phaser.Math.Between(tier.vyMin, tier.vyMax);
+        const vx = Phaser.Math.FloatBetween(-tier.vxR, tier.vxR);
+        const dot = this.add.circle(nx + Phaser.Math.FloatBetween(-5, 5), ny, r, tier.col, tier.ba);
+        dot.setDepth(5);
+        this.fireParticles.push({ circle: dot, born: time, lifetime: tier.life, vx, vy, startRadius: r, maxAlpha: tier.ba });
+      }
+    }
+    /* Update fire particles */
+    const dt = delta / 1000;
+    for (let i = this.fireParticles.length - 1; i >= 0; i--) {
+      const p = this.fireParticles[i];
+      const age = time - p.born;
+      if (age >= p.lifetime) {
+        p.circle.destroy();
+        this.fireParticles.splice(i, 1);
+      } else {
+        const t = age / p.lifetime;
+        p.circle.x += p.vx * dt;
+        p.circle.y += p.vy * dt;
+        const sf = t < 0.3 ? 1 + t * 0.9 : 1.27 - ((t - 0.3) / 0.7) * 1.27;
+        p.circle.setRadius(Math.max(0.5, p.startRadius * Math.max(0, sf)));
+        const fadeIn = Math.min(1, t / 0.08);
+        p.circle.setAlpha(p.maxAlpha * fadeIn * (1 - t));
+      }
     }
     this.glitchTimer += delta;
     if (!this.glitchActive && this.glitchTimer > 4000 + Math.random() * 2000) {
@@ -466,9 +502,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   private _updateRocket() {
-    const col = SKINS[this.selectedSkin].color;
     this.floatingPlayerImg.setTexture(SKINS[this.selectedSkin].key);
-    this.playerTrail.forEach(d => d.setFillStyle(col));
   }
 
   /* --------------------------------------------------------
