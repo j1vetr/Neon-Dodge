@@ -675,14 +675,14 @@ export class StartScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(D));
 
     const soundOn  = localStorage.getItem(STORAGE_SOUND) !== 'off';
-    const ICO      = 44;
-    const onX      = CX - ICO / 2 - 18;
-    const offX     = CX + ICO / 2 + 18;
-    const soundY   = py - PH/2 + 208;
+    const ICO      = 36;
+    const onX      = CX - ICO / 2 - 22;
+    const offX     = CX + ICO / 2 + 22;
+    const soundY   = py - PH/2 + 206;
 
-    const ringOn  = push(this.add.circle(onX, soundY, ICO / 2 + 5, 0x000000, 0)
+    const ringOn  = push(this.add.circle(onX, soundY, ICO / 2 + 4, 0x000000, 0)
       .setStrokeStyle(soundOn ? 2 : 0, 0x00ffcc, 1).setDepth(D));
-    const ringOff = push(this.add.circle(offX, soundY, ICO / 2 + 5, 0x000000, 0)
+    const ringOff = push(this.add.circle(offX, soundY, ICO / 2 + 4, 0x000000, 0)
       .setStrokeStyle(!soundOn ? 2 : 0, 0xff4477, 1).setDepth(D));
 
     const iconOn = push(this.add.image(onX, soundY, 'icon-sound-on')
@@ -711,12 +711,12 @@ export class StartScene extends Phaser.Scene {
     /* ── Rule 3 ── */
     const rule3 = this.add.graphics().setDepth(D);
     rule3.lineStyle(1, 0x00ffff, 0.1);
-    rule3.lineBetween(CX - PW/2 + 18, py - PH/2 + 228, CX + PW/2 - 18, py - PH/2 + 228);
+    rule3.lineBetween(CX - PW/2 + 18, py - PH/2 + 238, CX + PW/2 - 18, py - PH/2 + 238);
     push(rule3);
 
     /* ── Close button ── */
     const closeBg = push(this.add.graphics().setDepth(D));
-    const closeY  = py - PH/2 + 254;
+    const closeY  = py - PH/2 + 260;
     const drawClose = (hover: boolean) => {
       closeBg.clear();
       closeBg.lineStyle(1.5, 0xff4477, hover ? 1 : 0.7);
