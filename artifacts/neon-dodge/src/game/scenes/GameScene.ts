@@ -62,11 +62,15 @@ export class GameScene extends Phaser.Scene {
   private dirX = 1;
   private playerVX = 0;
 
-  /* Shield */
-  private shieldActive = false;
+  /* Shield — 0/1/2 stack */
+  private shieldCount = 0;
   private invincibleUntil = 0;
-  private shieldRing!: Phaser.GameObjects.Arc;
-  private shieldGlow!: Phaser.GameObjects.Arc;
+  private shieldRing!:  Phaser.GameObjects.Arc;  /* 1. kalkan halkası */
+  private shieldRing2!: Phaser.GameObjects.Arc;  /* 2. kalkan dış halkası */
+  private shieldGlow!:  Phaser.GameObjects.Arc;
+  /* Sol HUD kalkan ikonu */
+  private shieldHudIcon!:  Phaser.GameObjects.Image;
+  private shieldHudCount!: Phaser.GameObjects.Text;
 
   /* Obstacles */
   private obstacles: Obstacle[] = [];
@@ -82,7 +86,6 @@ export class GameScene extends Phaser.Scene {
 
   /* Power-up HUD */
   private doubleTimerTxt!: Phaser.GameObjects.Text;
-  private shieldIcon!: Phaser.GameObjects.Text;
 
   /* Trail */
   private trailParticles: TrailParticle[] = [];
@@ -196,12 +199,12 @@ export class GameScene extends Phaser.Scene {
     this._createScrollingStars();
     this._createGrid();
 
-    /* Shield glow (behind player) */
-    this.shieldGlow = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 36, COLOR_SHIELD, 0);
-    this.shieldGlow.setDepth(8);
-    this.shieldRing = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 24, COLOR_SHIELD, 0);
-    this.shieldRing.setDepth(9);
+    /* Shield glow + iç halka + dış halka (2. kalkan için) */
+    this.shieldGlow  = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 38, COLOR_SHIELD, 0).setDepth(8);
+    this.shieldRing  = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 24, COLOR_SHIELD, 0).setDepth(9);
     this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 0);
+    this.shieldRing2 = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 44, COLOR_SHIELD, 0).setDepth(8);
+    this.shieldRing2.setStrokeStyle(3, COLOR_SHIELD, 0);
 
     /* Player */
     this.player = this._buildRocket(PLAYER_START_X, PLAYER_START_Y, this.playerColor);
@@ -228,25 +231,31 @@ export class GameScene extends Phaser.Scene {
     this.levelProgressBg   = this.add.rectangle(24, 60, 112, 6, 0x112233, 1).setOrigin(0, 0).setDepth(20);
     this.levelProgressFill = this.add.rectangle(24, 60, 4, 6, 0xff2060, 1).setOrigin(0, 0).setDepth(21);
 
-    /* HUD — combo (oyuncunun üstünde, ortada, her zaman görünür) */
-    this.comboHUD = this.add.text(W / 2, PLAYER_START_Y - 148, '◦  YAKLAŞAN GEÇ  →  ×2', {
-      fontSize: '26px', fontFamily: '"Orbitron", monospace', color: '#224433',
-    }).setOrigin(0.5, 0.5).setDepth(22);
+    /* HUD — combo (level'ın altında, sol, küçük) */
+    this.comboHUD = this.add.text(24, 82, '◦ YAKIN GEÇ → ×2', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#224433',
+    }).setOrigin(0, 0).setDepth(22);
 
-    this.comboProgressHUD = this.add.text(W / 2, PLAYER_START_Y - 108, '', {
-      fontSize: '28px', fontFamily: 'monospace', color: '#446655',
-    }).setOrigin(0.5, 0.5).setDepth(22);
+    this.comboProgressHUD = this.add.text(24, 108, '', {
+      fontSize: '20px', fontFamily: 'monospace', color: '#446655',
+    }).setOrigin(0, 0).setDepth(22);
+
+    /* HUD — sol kenarda kalkan ikonu */
+    this.shieldHudIcon = this.add.image(36, 200, 'icon-shield')
+      .setDisplaySize(52, 52)
+      .setDepth(22)
+      .setAlpha(0.18);  /* başta soluk */
+
+    this.shieldHudCount = this.add.text(36, 230, '', {
+      fontSize: '22px', fontFamily: 'monospace', color: '#00aaff',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5, 0).setDepth(22);
 
     /* HUD — power-up timers */
     this.doubleTimerTxt = this.add.text(W / 2, 100, '', {
       fontSize: '22px', fontFamily: 'monospace', color: '#ffcc00',
       stroke: '#885500', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20);
-
-    this.shieldIcon = this.add.text(W - 24, 60, '', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#00aaff',
-      stroke: '#003366', strokeThickness: 4,
-    }).setOrigin(1, 0).setDepth(20);
 
     /* Level-up banner container */
     this.levelBannerContainer = this.add.container(W / 2, H / 2);
@@ -294,7 +303,7 @@ export class GameScene extends Phaser.Scene {
     this.waveCounter = 0;
     this.passedWaveIds.clear();
     this.nearMissWaveIds.clear();
-    this.shieldActive = false;
+    this.shieldCount = 0;
     this.invincibleUntil = 0;
     this.doubleUntil = 0;
 
@@ -306,15 +315,13 @@ export class GameScene extends Phaser.Scene {
       this.currentLevel = Math.max(0, Math.min(this.reviveData.level, LEVELS.length - 1));
       this.levelDef     = LEVELS[this.currentLevel];
       this.maxCombo     = this.reviveData.maxCombo;
-      this.shieldActive = true;
+      this.shieldCount  = 1; /* 1 kalkanla başla */
       /* 1.5 saniyelik dokunulmazlık (obstacle + duvar) */
       this.invincibleUntil = (this.time.now || 0) + 1500;
-      /* Kalkan görselini hemen aktifle */
-      this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 1);
-      this.shieldGlow.setAlpha(0.2);
       /* Kısa "DEVAM" toast */
       this._showReviveToast();
     }
+    this._updateShieldVisuals();
 
     this._updateLevelLabel();
     startAmbient(this.reviveData.active ? this.currentLevel : 0);
@@ -393,7 +400,7 @@ export class GameScene extends Phaser.Scene {
     const px = this.player.x + this.playerVX * dt;
     const hitWall = px < PLAYER_SIZE + 4 || px > GAME_WIDTH - PLAYER_SIZE - 4;
     if (hitWall) {
-      if (this.shieldActive) {
+      if (this.shieldCount > 0) {
         this._breakShield();
         this.dirX *= -1;
         this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
@@ -407,11 +414,10 @@ export class GameScene extends Phaser.Scene {
       }
     }
     const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 4, GAME_WIDTH - PLAYER_SIZE - 4);
-    this.player.x = clamped;
-    this.shieldRing.x = clamped;
-    this.shieldRing.y = this.player.y;
-    this.shieldGlow.x = clamped;
-    this.shieldGlow.y = this.player.y;
+    this.player.x   = clamped;
+    this.shieldRing.x  = clamped; this.shieldRing.y  = this.player.y;
+    this.shieldRing2.x = clamped; this.shieldRing2.y = this.player.y;
+    this.shieldGlow.x  = clamped; this.shieldGlow.y  = this.player.y;
 
     /* Scrolling stars */
     this._updateScrollingStars(dt);
@@ -431,7 +437,7 @@ export class GameScene extends Phaser.Scene {
 
     /* Collision */
     if (this._checkCollision()) {
-      if (this.shieldActive) {
+      if (this.shieldCount > 0) {
         this._breakShield();
       } else {
         this._onDeath();
@@ -446,10 +452,16 @@ export class GameScene extends Phaser.Scene {
     }
     this._updateTrail(time, delta);
 
-    if (this.shieldActive) {
+    /* Shield pulse animasyonu */
+    if (this.shieldCount > 0) {
       const pulse = 0.25 + 0.15 * Math.sin(time * 0.012);
       this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, pulse + 0.5);
-      this.shieldGlow.setAlpha(pulse);
+      this.shieldGlow.setAlpha(pulse * 0.8);
+      if (this.shieldCount >= 2) {
+        /* 2. kalkan: dış halka — ters fazda titrer */
+        const pulse2 = 0.2 + 0.15 * Math.sin(time * 0.012 + Math.PI);
+        this.shieldRing2.setStrokeStyle(3, COLOR_SHIELD, pulse2 + 0.3);
+      }
     }
 
     /* Power-up timer HUD */
@@ -592,8 +604,16 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _spawnPowerUp() {
     const W = GAME_WIDTH;
-    const types: Array<'shield' | 'double'> = ['shield', 'double'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    /* Kalkan sayısına göre spawn oranı:
+       0 kalkan → %50 kalkan  |  1 kalkan → %15 kalkan  |  2 kalkan → hiç kalkan */
+    let type: 'shield' | 'double';
+    if (this.shieldCount >= 2) {
+      type = 'double';
+    } else if (this.shieldCount === 1) {
+      type = Math.random() < 0.15 ? 'shield' : 'double';
+    } else {
+      type = Math.random() < 0.5 ? 'shield' : 'double';
+    }
 
     const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
     const color    = colorMap[type];
@@ -665,9 +685,8 @@ export class GameScene extends Phaser.Scene {
     pu.body?.destroy(); pu.icon.destroy(); pu.ring.destroy();
 
     if (pu.type === 'shield') {
-      this.shieldActive = true;
-      this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 1);
-      this.shieldGlow.setAlpha(0.2);
+      this.shieldCount = Math.min(this.shieldCount + 1, 2);
+      this._updateShieldVisuals();
     } else if (pu.type === 'double') {
       this.doubleUntil = this.time.now + POWERUP_DOUBLE_DURATION;
     }
@@ -682,13 +701,11 @@ export class GameScene extends Phaser.Scene {
      SHIELD BREAK
   -------------------------------------------------------- */
   private _breakShield() {
-    this.shieldActive = false;
+    this.shieldCount = Math.max(this.shieldCount - 1, 0);
     this.invincibleUntil = this.time.now + 900;
     playShieldHit();
     this.cameras.main.shake(200, 0.010);
-
-    this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 0);
-    this.shieldGlow.setAlpha(0);
+    this._updateShieldVisuals();
 
     for (let i = 0; i < 10; i++) {
       const angle = (i / 10) * Math.PI * 2;
@@ -706,6 +723,45 @@ export class GameScene extends Phaser.Scene {
     }
 
     this._showPopupText('SHIELD BROKEN!', '#00aaff');
+  }
+
+  /* --------------------------------------------------------
+     SHIELD — görsel güncelleme (HUD + halka + glow)
+  -------------------------------------------------------- */
+  private _updateShieldVisuals() {
+    if (this.shieldCount === 0) {
+      this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 0);
+      this.shieldRing2.setStrokeStyle(3, COLOR_SHIELD, 0);
+      this.shieldGlow.setAlpha(0);
+    } else {
+      /* İç halka: her zaman aktif */
+      this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 0.7);
+      this.shieldGlow.setAlpha(0.2);
+      /* Dış halka: yalnızca 2. kalkan */
+      if (this.shieldCount >= 2) {
+        this.shieldRing2.setStrokeStyle(3, COLOR_SHIELD, 0.5);
+      } else {
+        this.shieldRing2.setStrokeStyle(3, COLOR_SHIELD, 0);
+      }
+    }
+    this._updateShieldHUD();
+  }
+
+  private _updateShieldHUD() {
+    switch (this.shieldCount) {
+      case 0:
+        this.shieldHudIcon.setAlpha(0.15);
+        this.shieldHudCount.setText('');
+        break;
+      case 1:
+        this.shieldHudIcon.setAlpha(1);
+        this.shieldHudCount.setText('');
+        break;
+      case 2:
+        this.shieldHudIcon.setAlpha(1);
+        this.shieldHudCount.setText('×2');
+        break;
+    }
   }
 
   /* --------------------------------------------------------
@@ -889,27 +945,27 @@ export class GameScene extends Phaser.Scene {
 
     if (this.combo === 0) {
       /* İpucu: hiç streak yok */
-      this.comboHUD.setText('◦  YAKLAŞAN GEÇ  →  ×2');
-      this.comboHUD.setStyle({ color: '#224433', fontSize: '24px' });
+      this.comboHUD.setText('◦ YAKIN GEÇ → ×2');
+      this.comboHUD.setStyle({ color: '#224433', fontSize: '18px' });
       this.comboProgressHUD.setText('');
     } else if (tier === 0) {
       /* 1. yakın geçiş — tier henüz açılmadı */
       const goal = nextGoals[0];
-      this.comboHUD.setText(`◉  ${this.combo} / ${goal}  →  ×2`);
-      this.comboHUD.setStyle({ color: '#33ff99', fontSize: '24px' });
+      this.comboHUD.setText(`◉ ${this.combo}/${goal} → ×2`);
+      this.comboHUD.setStyle({ color: '#33ff99', fontSize: '18px' });
       this.comboProgressHUD.setText(this._dotBar(this.combo, goal));
       this.comboProgressHUD.setStyle({ color: '#33ff99' });
     } else if (tier < maxTier) {
       const goal = nextGoals[tier];
       this.comboHUD.setText(`×${this.comboMultiplier} COMBO`);
-      this.comboHUD.setStyle({ color: colors[tier], fontSize: '34px' });
+      this.comboHUD.setStyle({ color: colors[tier], fontSize: '22px' });
       this.comboProgressHUD.setText(this._dotBar(this.combo, goal));
       this.comboProgressHUD.setStyle({ color: colors[tier] });
     } else {
       /* MAX tier */
-      this.comboHUD.setText(`×5 COMBO  MAX!`);
-      this.comboHUD.setStyle({ color: '#00ffff', fontSize: '34px' });
-      this.comboProgressHUD.setText('● ● ● ● ● ● ● ● ● ●');
+      this.comboHUD.setText(`×5 COMBO MAX!`);
+      this.comboHUD.setStyle({ color: '#00ffff', fontSize: '22px' });
+      this.comboProgressHUD.setText('● ● ● ● ●');
       this.comboProgressHUD.setStyle({ color: '#00ffff' });
     }
 
@@ -1010,7 +1066,7 @@ export class GameScene extends Phaser.Scene {
       this.player.setAlpha(1);
     }
 
-    this.shieldIcon.setText(this.shieldActive ? '[ SHIELD ]' : '');
+    this._updateShieldHUD();
   }
 
   /* --------------------------------------------------------
