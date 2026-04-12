@@ -68,6 +68,7 @@ export class GameScene extends Phaser.Scene {
   private obstacles: Obstacle[] = [];
   private spawnTimer = 0;
   private waveCounter = 0;
+  private lastGapCenter = -1;
   private passedWaveIds = new Set<number>();
 
   /* Power-ups */
@@ -251,6 +252,7 @@ export class GameScene extends Phaser.Scene {
     this.scoreDisplay = 0;
     this.elapsedTime = 0;
     this.spawnTimer = 0;
+    this.lastGapCenter = -1;
     this.lastPowerUpTime = -99999;
     this.obstacles = [];
     this.powerUps = [];
@@ -495,7 +497,24 @@ export class GameScene extends Phaser.Scene {
     const gMin = Math.round(this._lerpNum('gapMin'));
     const gMax = Math.round(this._lerpNum('gapMax'));
     const gapSize = Phaser.Math.Between(gMin, gMax);
-    const gapX = Phaser.Math.Between(PLAYER_SIZE * 2, W - PLAYER_SIZE * 2 - gapSize);
+
+    /* Gap drift limiti: bir sonraki boşluk, oyuncunun erişebileceğinden
+       fazla uzakta spawnlanamaz. maxDrift = hız × spawn_aralığı × 0.85 */
+    const playerSpeed = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult');
+    const maxDrift    = playerSpeed * (this._lerpNum('spawnMs') / 1000) * 0.85;
+    const margin      = PLAYER_SIZE * 2;
+    const halfGap     = gapSize / 2;
+
+    let gapCenter: number;
+    if (this.lastGapCenter < 0) {
+      gapCenter = Phaser.Math.Between(margin + halfGap, W - margin - halfGap);
+    } else {
+      const minC = Math.max(margin + halfGap,     this.lastGapCenter - maxDrift);
+      const maxC = Math.min(W - margin - halfGap, this.lastGapCenter + maxDrift);
+      gapCenter = Phaser.Math.Between(Math.round(minC), Math.round(maxC));
+    }
+    this.lastGapCenter = gapCenter;
+    const gapX = Math.round(gapCenter - halfGap);
     const wc = this._lerpWallColor();
 
     const leftW = gapX;
