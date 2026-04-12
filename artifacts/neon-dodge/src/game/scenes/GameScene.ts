@@ -300,6 +300,8 @@ export class GameScene extends Phaser.Scene {
       this.levelDef     = LEVELS[this.currentLevel];
       this.maxCombo     = this.reviveData.maxCombo;
       this.shieldActive = true;
+      /* 1.5 saniyelik dokunulmazlık (obstacle + duvar) */
+      this.invincibleUntil = (this.time.now || 0) + 1500;
       /* Kalkan görselini hemen aktifle */
       this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 1);
       this.shieldGlow.setAlpha(0.2);
@@ -386,6 +388,10 @@ export class GameScene extends Phaser.Scene {
     if (hitWall) {
       if (this.shieldActive) {
         this._breakShield();
+        this.dirX *= -1;
+        this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
+      } else if (now < this.invincibleUntil) {
+        /* Kalkan kırıldıktan sonraki invincible süresinde duvar bounce — ölüm yok */
         this.dirX *= -1;
         this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
       } else {
