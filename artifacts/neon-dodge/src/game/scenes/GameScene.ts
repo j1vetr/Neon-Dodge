@@ -49,6 +49,10 @@ interface TrailParticle {
   circle: Phaser.GameObjects.Arc;
   born: number;
   lifetime: number;
+  vx: number;
+  vy: number;
+  startRadius: number;
+  maxAlpha: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -395,7 +399,7 @@ export class GameScene extends Phaser.Scene {
       this.lastTrailTime = time;
       this._emitTrail(time);
     }
-    this._updateTrail(time);
+    this._updateTrail(time, delta);
 
     if (this.shieldActive) {
       const pulse = 0.25 + 0.15 * Math.sin(time * 0.012);
@@ -1062,20 +1066,38 @@ export class GameScene extends Phaser.Scene {
      TRAIL PARTICLES
   -------------------------------------------------------- */
   private _emitTrail(time: number) {
-    const flameColors = [this.playerColor, 0xffffff, 0xff8800, 0xffff00];
-    const col = flameColors[Math.floor(Math.random() * flameColors.length)];
-    const dot = this.add.circle(
-      this.player.x + Phaser.Math.Between(-8, 8),
-      this.player.y + 42 + Phaser.Math.Between(0, 12),
-      Phaser.Math.Between(4, 8),
-      col,
-      0.75,
-    );
-    dot.setDepth(8);
-    this.trailParticles.push({ circle: dot, born: time, lifetime: TRAIL_PARTICLE_LIFETIME });
+    /* 4-tier fire particle system:
+       0 = white core  (tiny, fast, brief)
+       1 = yellow flame (medium)
+       2 = orange mid   (larger, slower)
+       3 = red ember    (biggest, slowest, longest) */
+    const tiers = [
+      { col: 0xffffff, ba: 0.95, rMin: 2, rMax: 4,  vyMin: 55,  vyMax: 95,  vxR: 10, life: 190 },
+      { col: 0xffee22, ba: 0.88, rMin: 4, rMax: 7,  vyMin: 85,  vyMax: 140, vxR: 22, life: 310 },
+      { col: 0xff6600, ba: 0.72, rMin: 5, rMax: 9,  vyMin: 110, vyMax: 170, vxR: 34, life: 440 },
+      { col: 0xcc1100, ba: 0.45, rMin: 6, rMax: 12, vyMin: 135, vyMax: 200, vxR: 46, life: 600 },
+    ];
+
+    const nx = this.player.x;
+    const ny = this.player.y + 44; /* rocket nozzle */
+
+    for (const tier of tiers) {
+      const r  = Phaser.Math.Between(tier.rMin, tier.rMax);
+      const vy = Phaser.Math.Between(tier.vyMin, tier.vyMax);
+      const vx = Phaser.Math.FloatBetween(-tier.vxR, tier.vxR);
+      const px = nx + Phaser.Math.FloatBetween(-5, 5);
+
+      const dot = this.add.circle(px, ny, r, tier.col, tier.ba);
+      dot.setDepth(8);
+      this.trailParticles.push({
+        circle: dot, born: time, lifetime: tier.life,
+        vx, vy, startRadius: r, maxAlpha: tier.ba,
+      });
+    }
   }
 
-  private _updateTrail(time: number) {
+  private _updateTrail(time: number, delta: number) {
+    const dt = delta / 1000;
     for (let i = this.trailParticles.length - 1; i >= 0; i--) {
       const p = this.trailParticles[i];
       const age = time - p.born;
@@ -1083,9 +1105,22 @@ export class GameScene extends Phaser.Scene {
         p.circle.destroy();
         this.trailParticles.splice(i, 1);
       } else {
-        const t = age / p.lifetime;
-        p.circle.setAlpha(0.7 * (1 - t));
-        p.circle.setScale(1 - t * 0.6);
+        const t = age / p.lifetime; /* 0=fresh → 1=dying */
+
+        /* Physics: drift downward + turbulence */
+        p.circle.x += p.vx * dt;
+        p.circle.y += p.vy * dt;
+
+        /* Size: expand to peak at t≈0.3, then shrink */
+        const sf = t < 0.3
+          ? 1 + t * 0.9
+          : 1.27 - ((t - 0.3) / 0.7) * 1.27;
+        p.circle.setRadius(Math.max(0.5, p.startRadius * Math.max(0, sf)));
+
+        /* Alpha: snap in → sustain → smooth fade out */
+        const fadeIn  = Math.min(1, t / 0.08);
+        const fadeOut = 1 - t;
+        p.circle.setAlpha(p.maxAlpha * fadeIn * fadeOut);
       }
     }
   }
