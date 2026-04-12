@@ -408,8 +408,8 @@ export class StartScene extends Phaser.Scene {
 
       const hit = this.add.rectangle(x, tileY, TILE + 24, TILE + 24, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => { if (i !== this.selectedSkin) img.setAlpha(0.6); });
-      hit.on('pointerout',  () => { if (i !== this.selectedSkin) img.setAlpha(0.35); });
+      hit.on('pointerover', () => { if (i !== this.selectedSkin) img.setAlpha(0.65); });
+      hit.on('pointerout',  () => { if (i !== this.selectedSkin) img.setAlpha(0.38); });
       hit.on('pointerdown', () => {
         this.selectedSkin = i;
         this._refreshSelector();
@@ -453,7 +453,7 @@ export class StartScene extends Phaser.Scene {
         g.lineStyle(2, col, 0.9);
         g.strokeRoundedRect(x - h - 8, cy - h - 8, S + 16, S + 16, r + 4);
       }
-      this.skinImgs[i]?.setAlpha(sel ? 1 : 0.35).setScale(sel ? 1 : 0.85);
+      this.skinImgs[i]?.setAlpha(sel ? 1 : 0.38);
     }
   }
 
