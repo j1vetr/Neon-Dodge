@@ -344,11 +344,18 @@ export class GameScene extends Phaser.Scene {
 
     /* Player horizontal movement */
     const px = this.player.x + this.playerVX * dt;
-    const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 4, GAME_WIDTH - PLAYER_SIZE - 4);
-    if (px !== clamped) {
-      this.dirX *= -1;
-      this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
+    const hitWall = px < PLAYER_SIZE + 4 || px > GAME_WIDTH - PLAYER_SIZE - 4;
+    if (hitWall) {
+      if (this.shieldActive) {
+        this._breakShield();
+        this.dirX *= -1;
+        this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
+      } else {
+        this._onDeath();
+        return;
+      }
     }
+    const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 4, GAME_WIDTH - PLAYER_SIZE - 4);
     this.player.x = clamped;
     this.shieldRing.x = clamped;
     this.shieldRing.y = this.player.y;
