@@ -662,37 +662,19 @@ export class GameScene extends Phaser.Scene {
       duration: 800, repeat: -1, ease: 'Sine.easeOut',
     });
 
-    let body: Phaser.GameObjects.Rectangle | undefined;
-    let icon: Phaser.GameObjects.Image;
+    /* Shield ve Double: görseller kendi içinde yeterince güzel —
+       kutucuk ve tint yok, orijinal renk korunuyor */
+    const iconKey = type === 'shield' ? 'icon-shield' : 'icon-double';
+    const icon = this.add.image(x, y, iconKey)
+      .setDisplaySize(80, 80)
+      .setDepth(7);
+    this.tweens.add({
+      targets: icon,
+      scaleX: 1.08, scaleY: 1.08,
+      duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
 
-    if (type === 'shield') {
-      /* Shield: koyu arka plan kutusu + tint */
-      body = this.add.rectangle(x, y, bw, bh, 0x000000, 0.82)
-        .setStrokeStyle(4, color, 1)
-        .setDepth(6);
-      this.tweens.add({
-        targets: body,
-        scaleX: 1.06, scaleY: 1.06,
-        duration: 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      });
-      icon = this.add.image(x, y, 'icon-shield')
-        .setDisplaySize(60, 60)
-        .setTint(color)
-        .setDepth(7);
-    } else {
-      /* Double (2×): kendi görseli yeterli — kutucuk ve tint yok */
-      icon = this.add.image(x, y, 'icon-double')
-        .setDisplaySize(80, 80)
-        .setDepth(7);
-      /* Hafif sallanma animasyonu */
-      this.tweens.add({
-        targets: icon,
-        scaleX: 1.08, scaleY: 1.08,
-        duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-      });
-    }
-
-    this.powerUps.push({ body, icon, ring, type, collected: false });
+    this.powerUps.push({ icon, ring, type, collected: false });
   }
 
   /* --------------------------------------------------------
