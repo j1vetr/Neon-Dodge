@@ -1008,10 +1008,9 @@ export class GameScene extends Phaser.Scene {
   /* --------------------------------------------------------
      ROCKET PLAYER BUILDER
   -------------------------------------------------------- */
-  private _buildRocket(x: number, y: number, color: number): Phaser.GameObjects.Container {
-    const img = this.add.image(0, 0, 'player-rocket')
-      .setDisplaySize(76, 84)
-      .setTint(color);
+  private _buildRocket(x: number, y: number, _color: number): Phaser.GameObjects.Container {
+    const img = this.add.image(0, 0, SKINS[this.skinIndex].key)
+      .setDisplaySize(76, 84);
     const container = this.add.container(x, y, [img]);
     return container;
   }

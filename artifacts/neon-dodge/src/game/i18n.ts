@@ -16,8 +16,8 @@ export function setLang(l: Lang) {
 export const STRINGS = {
   en: {
     noRecord:    'NO RECORD YET',
-    selectSkin:  'SELECT COLOR',
-    skinNames:   ['CYAN', 'MAGENTA', 'LIME', 'GOLD', 'WHITE'],
+    selectSkin:  'SELECT SKIN',
+    skinNames:   ['KLASİK', 'NASA', 'TÜRK'],
     play:        '▶   PLAY',
     games:       'GAMES',
     totalTime:   'TOTAL TIME',
@@ -52,8 +52,8 @@ export const STRINGS = {
   },
   tr: {
     noRecord:    'KAYIT YOK',
-    selectSkin:  'RENK SEÇ',
-    skinNames:   ['SİYAN', 'EFLATUN', 'LİME', 'ALTIN', 'BEYAZ'],
+    selectSkin:  'KOSTÜM SEÇ',
+    skinNames:   ['KLASİK', 'NASA', 'TÜRK'],
     play:        '▶   OYNA',
     games:       'OYUN',
     totalTime:   'TOPLAM SÜRE',

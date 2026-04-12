@@ -13,6 +13,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('icon-shield',   '/assets/shield.png');
     this.load.image('icon-double',   '/assets/double.png');
     this.load.image('player-rocket', '/assets/rocket.png');
+    this.load.image('skin-klasik',   '/assets/skin-klasik.png');
+    this.load.image('skin-nasa',     '/assets/skin-nasa.png');
+    this.load.image('skin-turk',     '/assets/skin-turk.png');
     this.load.image('icon-menu',     '/assets/icon-menu.png');
     this.load.image('flag-tr',       '/assets/flag-tr.png');
     this.load.image('flag-en',       '/assets/flag-en.png');

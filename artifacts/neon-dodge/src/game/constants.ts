@@ -128,11 +128,9 @@ export const COLOR_DOUBLE = 0xffcc00;
 
 /* Skins */
 export const SKINS = [
-  { name: 'Cyan',    color: 0x00ffff, hex: '#00ffff' },
-  { name: 'Magenta', color: 0xff00ff, hex: '#ff00ff' },
-  { name: 'Lime',    color: 0x00ff44, hex: '#00ff44' },
-  { name: 'Gold',    color: 0xffcc00, hex: '#ffcc00' },
-  { name: 'White',   color: 0xffffff, hex: '#ffffff' },
+  { name: 'KLASİK', key: 'skin-klasik', color: 0x00ffff, hex: '#00ffff' },
+  { name: 'NASA',   key: 'skin-nasa',   color: 0x4499ff, hex: '#4499ff' },
+  { name: 'TÜRK',   key: 'skin-turk',   color: 0xff3344, hex: '#ff3344' },
 ];
 
 /* Storage keys */

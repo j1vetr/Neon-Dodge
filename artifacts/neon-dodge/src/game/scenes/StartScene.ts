@@ -43,6 +43,7 @@ export class StartScene extends Phaser.Scene {
 
   /* Card / color tiles */
   private skinGfx!:          Phaser.GameObjects.Graphics;
+  private skinImgs:          Phaser.GameObjects.Image[] = [];
   private cardBorderGfx!:    Phaser.GameObjects.Graphics;
   private selectedColorTxt!: Phaser.GameObjects.Text;
   private readonly TILE = 64;
@@ -361,8 +362,8 @@ export class StartScene extends Phaser.Scene {
       duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
-    this.floatingPlayerImg = this.add.image(0, 0, 'player-rocket')
-      .setDisplaySize(104, 120).setTint(skin.color);
+    this.floatingPlayerImg = this.add.image(0, 0, SKINS[this.selectedSkin].key)
+      .setDisplaySize(104, 120);
     this.floatingPlayer = this.add.container(CX, rocketY, [this.floatingPlayerImg]);
     this.tweens.add({
       targets: [this.floatingPlayer, rGlow], y: '-=22',
@@ -395,14 +396,20 @@ export class StartScene extends Phaser.Scene {
     this.tileX0 = tileX0;
 
     this.skinGfx = this.add.graphics();
+    this.skinImgs = [];
 
     for (let i = 0; i < SKINS.length; i++) {
       const x = tileX0 + i * TGAP;
 
+      const img = this.add.image(x, tileY, SKINS[i].key)
+        .setDisplaySize(TILE, TILE)
+        .setAlpha(i === this.selectedSkin ? 1 : 0.35);
+      this.skinImgs.push(img);
+
       const hit = this.add.rectangle(x, tileY, TILE + 24, TILE + 24, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.05); });
-      hit.on('pointerout',  () => hit.setFillStyle(0xffffff, 0));
+      hit.on('pointerover', () => { if (i !== this.selectedSkin) img.setAlpha(0.6); });
+      hit.on('pointerout',  () => { if (i !== this.selectedSkin) img.setAlpha(0.35); });
       hit.on('pointerdown', () => {
         this.selectedSkin = i;
         this._refreshSelector();
@@ -428,7 +435,7 @@ export class StartScene extends Phaser.Scene {
     g.strokeRoundedRect(W / 2 - CARD_W / 2, CARD_TOP, CARD_W, CARD_H, 28);
   }
 
-  /* ── Color tiles ── */
+  /* ── Skin tiles ── */
   private _drawTiles() {
     const g = this.skinGfx;
     g.clear();
@@ -441,16 +448,12 @@ export class StartScene extends Phaser.Scene {
       const sel = i === this.selectedSkin;
       const h   = S / 2;
       if (sel) {
-        g.fillStyle(col, 1);
-        g.fillRoundedRect(x - h, cy - h, S, S, r);
-        g.lineStyle(4, 0xffffff, 0.55);
-        g.strokeRoundedRect(x - h, cy - h, S, S, r);
-      } else {
-        g.fillStyle(col, 0.18);
-        g.fillRoundedRect(x - h, cy - h, S, S, r);
-        g.lineStyle(2, col, 0.35);
-        g.strokeRoundedRect(x - h, cy - h, S, S, r);
+        g.lineStyle(4, 0xffffff, 0.7);
+        g.strokeRoundedRect(x - h - 4, cy - h - 4, S + 8, S + 8, r + 2);
+        g.lineStyle(2, col, 0.9);
+        g.strokeRoundedRect(x - h - 8, cy - h - 8, S + 16, S + 16, r + 4);
       }
+      this.skinImgs[i]?.setAlpha(sel ? 1 : 0.35).setScale(sel ? 1 : 0.85);
     }
   }
 
@@ -464,7 +467,7 @@ export class StartScene extends Phaser.Scene {
 
   private _updateRocket() {
     const col = SKINS[this.selectedSkin].color;
-    this.floatingPlayerImg.setTint(col);
+    this.floatingPlayerImg.setTexture(SKINS[this.selectedSkin].key);
     this.playerTrail.forEach(d => d.setFillStyle(col));
   }
 
