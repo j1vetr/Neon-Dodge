@@ -114,6 +114,7 @@ export class GameScene extends Phaser.Scene {
   private maxCombo = 0;
   private comboMultiplier = 1;
   private comboHUD!: Phaser.GameObjects.Text;
+  private comboProgressHUD!: Phaser.GameObjects.Text;
   private lastComboTier = 0;
 
   /* Level system */
@@ -227,10 +228,14 @@ export class GameScene extends Phaser.Scene {
     this.levelProgressBg   = this.add.rectangle(24, 60, 112, 6, 0x112233, 1).setOrigin(0, 0).setDepth(20);
     this.levelProgressFill = this.add.rectangle(24, 60, 4, 6, 0xff2060, 1).setOrigin(0, 0).setDepth(21);
 
-    /* HUD — combo (top left, below level) */
-    this.comboHUD = this.add.text(24, 72, '', {
-      fontSize: '24px', fontFamily: 'monospace', color: '#ffcc00',
-    }).setOrigin(0, 0).setDepth(20);
+    /* HUD — combo (oyuncunun üstünde, ortada, her zaman görünür) */
+    this.comboHUD = this.add.text(W / 2, PLAYER_START_Y - 148, '◦  YAKLAŞAN GEÇ  →  ×2', {
+      fontSize: '26px', fontFamily: '"Orbitron", monospace', color: '#224433',
+    }).setOrigin(0.5, 0.5).setDepth(22);
+
+    this.comboProgressHUD = this.add.text(W / 2, PLAYER_START_Y - 108, '', {
+      fontSize: '28px', fontFamily: 'monospace', color: '#446655',
+    }).setOrigin(0.5, 0.5).setDepth(22);
 
     /* HUD — power-up timers */
     this.doubleTimerTxt = this.add.text(W / 2, 100, '', {
@@ -868,38 +873,68 @@ export class GameScene extends Phaser.Scene {
   /* --------------------------------------------------------
      COMBO — Near-Miss Streak
   -------------------------------------------------------- */
-  private _incrementCombo() {
-    this.combo++;
-    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-
+  private _updateComboHUD() {
     const tier =
       this.combo >= COMBO_X5 ? 4 :
       this.combo >= COMBO_X4 ? 3 :
       this.combo >= COMBO_X3 ? 2 :
       this.combo >= COMBO_X2 ? 1 : 0;
 
-    this.comboMultiplier = tier === 0 ? 1 : tier + 1;
+    const mult     = tier === 0 ? 1 : tier + 1;
+    this.comboMultiplier = mult;
 
-    const colors   = ['#aaffcc', '#ffcc00', '#ff8800', '#ff00ff', '#00ffff'];
-    const nextGoal = [COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5, COMBO_X5]; /* tier → sonraki hedef */
-    const maxTier  = 4;
+    const colors   = ['#33ff99', '#ffcc00', '#ff8800', '#ff44ff', '#00ffff'];
+    const nextGoals = [COMBO_X2, COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5];
+    const maxTier   = 4;
 
-    let hudText = '';
-    if (tier > 0) {
-      if (tier < maxTier) {
-        hudText = `×${this.comboMultiplier} COMBO  ${this.combo}/${nextGoal[tier]}`;
-      } else {
-        hudText = `×${this.comboMultiplier} COMBO  MAX!`;
-      }
+    if (this.combo === 0) {
+      /* İpucu: hiç streak yok */
+      this.comboHUD.setText('◦  YAKLAŞAN GEÇ  →  ×2');
+      this.comboHUD.setStyle({ color: '#224433', fontSize: '24px' });
+      this.comboProgressHUD.setText('');
+    } else if (tier === 0) {
+      /* 1. yakın geçiş — tier henüz açılmadı */
+      const goal = nextGoals[0];
+      this.comboHUD.setText(`◉  ${this.combo} / ${goal}  →  ×2`);
+      this.comboHUD.setStyle({ color: '#33ff99', fontSize: '24px' });
+      this.comboProgressHUD.setText(this._dotBar(this.combo, goal));
+      this.comboProgressHUD.setStyle({ color: '#33ff99' });
+    } else if (tier < maxTier) {
+      const goal = nextGoals[tier];
+      this.comboHUD.setText(`×${this.comboMultiplier} COMBO`);
+      this.comboHUD.setStyle({ color: colors[tier], fontSize: '34px' });
+      this.comboProgressHUD.setText(this._dotBar(this.combo, goal));
+      this.comboProgressHUD.setStyle({ color: colors[tier] });
+    } else {
+      /* MAX tier */
+      this.comboHUD.setText(`×5 COMBO  MAX!`);
+      this.comboHUD.setStyle({ color: '#00ffff', fontSize: '34px' });
+      this.comboProgressHUD.setText('● ● ● ● ● ● ● ● ● ●');
+      this.comboProgressHUD.setStyle({ color: '#00ffff' });
     }
-    this.comboHUD.setText(hudText);
-    if (tier > 0) this.comboHUD.setStyle({ color: colors[tier] });
 
-    /* Yeni tier'a geçince ses + popup */
-    if (tier > this.lastComboTier) {
+    return tier;
+  }
+
+  private _dotBar(current: number, goal: number): string {
+    /* Renkli dairelerle ilerleme çubuğu: ● ● ● ◦ ◦ */
+    const filled = Math.min(current, goal);
+    return '● '.repeat(filled).trim() + (goal > filled ? '  ' + '◦ '.repeat(goal - filled).trim() : '');
+  }
+
+  private _incrementCombo() {
+    this.combo++;
+    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+    const prevTier = this.lastComboTier;
+    const tier = this._updateComboHUD(); /* comboMultiplier _updateComboHUD içinde set ediliyor */
+
+    /* Yeni tier'a geçince ses + büyük popup */
+    if (tier > prevTier) {
       this.lastComboTier = tier;
       playCombo(tier);
-      this._showPopupText(`×${this.comboMultiplier} COMBO!`, colors[tier]);
+      const colors = ['#33ff99', '#ffcc00', '#ff8800', '#ff44ff', '#00ffff'];
+      this._showPopupText(`★ ×${this.comboMultiplier} COMBO! ★`, colors[tier], 40);
     }
   }
 
@@ -907,23 +942,23 @@ export class GameScene extends Phaser.Scene {
     this.combo = 0;
     this.comboMultiplier = 1;
     this.lastComboTier = 0;
-    this.comboHUD.setText('');
+    this._updateComboHUD();
   }
 
   /* --------------------------------------------------------
      POPUP TEXT
   -------------------------------------------------------- */
-  private _showPopupText(text: string, color: string) {
+  private _showPopupText(text: string, color: string, size = 32) {
     const W = GAME_WIDTH;
-    const x = Phaser.Math.Between(W * 0.25, W * 0.75);
-    const y = PLAYER_START_Y - 60;
+    const x = Phaser.Math.Between(W * 0.2, W * 0.8);
+    const y = PLAYER_START_Y - 80;
     const t = this.add.text(x, y, text, {
-      fontSize: '30px', fontFamily: 'monospace', color,
-      stroke: '#000000', strokeThickness: 4,
+      fontSize: `${size}px`, fontFamily: 'monospace', color,
+      stroke: '#000000', strokeThickness: size > 35 ? 6 : 4,
     }).setOrigin(0.5).setDepth(25);
     this.tweens.add({
-      targets: t, y: y - 100, alpha: 0,
-      duration: 800, ease: 'Power2',
+      targets: t, y: y - 120, alpha: 0,
+      duration: 900, ease: 'Power2',
       onComplete: () => t.destroy(),
     });
   }
