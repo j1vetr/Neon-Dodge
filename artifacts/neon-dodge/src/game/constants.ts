@@ -154,7 +154,7 @@ export const BASE_WAVE_BONUS       = 20;   /* güvenli geçiş baz puanı (combo
 
 /* Power-ups */
 export const POWERUP_SIZE            = 28;
-export const POWERUP_SPAWN_CHANCE    = 0.18;
+export const POWERUP_SPAWN_CHANCE    = 0.40;
 export const POWERUP_DOUBLE_DURATION = 5000;
 
 /* Sound */

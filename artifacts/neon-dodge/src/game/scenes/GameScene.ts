@@ -241,14 +241,14 @@ export class GameScene extends Phaser.Scene {
     }).setOrigin(0, 0).setDepth(22);
 
     /* HUD — sol kenarda kalkan ikonu */
-    this.shieldHudIcon = this.add.image(36, 200, 'icon-shield')
-      .setDisplaySize(52, 52)
+    this.shieldHudIcon = this.add.image(36, 196, 'icon-shield')
+      .setDisplaySize(72, 72)
       .setDepth(22)
       .setAlpha(0.18);  /* başta soluk */
 
-    this.shieldHudCount = this.add.text(36, 230, '', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#00aaff',
-      stroke: '#000000', strokeThickness: 3,
+    this.shieldHudCount = this.add.text(36, 238, '', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#00ddff',
+      stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(22);
 
     /* HUD — power-up timers */
@@ -591,7 +591,7 @@ export class GameScene extends Phaser.Scene {
     const sinceLastPowerUp = this.elapsedTime * 1000 - this.lastPowerUpTime;
     if (
       this.powerUps.length === 0 &&
-      sinceLastPowerUp >= 8000 &&
+      sinceLastPowerUp >= 6000 &&
       Math.random() < POWERUP_SPAWN_CHANCE
     ) {
       this._spawnPowerUp();
