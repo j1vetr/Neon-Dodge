@@ -1,6 +1,6 @@
 
 /* =========================================================
-   GAME OVER SCENE  —  clean redesign
+   GAME OVER SCENE  —  800×1400 HD resolution
    ========================================================= */
 
 import Phaser from 'phaser';
@@ -42,61 +42,61 @@ export class GameOverScene extends Phaser.Scene {
     this._drawGrid();
 
     /* ---- Top accent line ---- */
-    this.add.rectangle(W / 2, 0, W, 3, 0xff2060, 1);
+    this.add.rectangle(W / 2, 0, W, 6, 0xff2060, 1);
 
     /* ---- GAME OVER header ---- */
-    this.add.text(W / 2, 52, t().gameOver, {
-      fontSize: '34px',
+    this.add.text(W / 2, 104, t().gameOver, {
+      fontSize: '68px',
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
       color: '#050510',
       stroke: '#ff2060',
-      strokeThickness: 2,
-      shadow: { color: '#ff2060', blur: 12, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
+      strokeThickness: 4,
+      shadow: { color: '#ff2060', blur: 24, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
 
     /* ---- Player rocket preview ---- */
-    const glow = this.add.circle(W / 2, 106, 28, skin.color, 0.1);
+    const glow = this.add.circle(W / 2, 212, 56, skin.color, 0.1);
     this.tweens.add({ targets: glow, alpha: 0.04, duration: 900, yoyo: true, repeat: -1 });
 
-    const rocketImg = this.add.image(W / 2, 106, 'player-rocket')
-      .setDisplaySize(48, 54)
+    const rocketImg = this.add.image(W / 2, 212, 'player-rocket')
+      .setDisplaySize(96, 108)
       .setTint(skin.color);
-    this.tweens.add({ targets: [rocketImg, glow], y: '+=4', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: [rocketImg, glow], y: '+=8', duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     /* ---- Divider ---- */
-    this._divider(128);
+    this._divider(256);
 
     /* ---- Score block ---- */
-    this.add.text(W / 2, 158, `${this.score}`, {
-      fontSize: '56px',
+    this.add.text(W / 2, 316, `${this.score}`, {
+      fontSize: '112px',
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
       color: '#050510',
       stroke: '#00ffff',
-      strokeThickness: 2,
-      shadow: { color: '#00ffff', blur: 12, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
+      strokeThickness: 4,
+      shadow: { color: '#00ffff', blur: 24, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
-    this.add.text(W / 2, 196, t().score, {
-      fontSize: '11px', fontFamily: 'monospace', color: '#334455', letterSpacing: 3,
+    this.add.text(W / 2, 392, t().score, {
+      fontSize: '22px', fontFamily: 'monospace', color: '#334455', letterSpacing: 3,
     }).setOrigin(0.5);
 
     /* ---- New best badge ---- */
     const newBest = this.score > 0 && this.score >= this.best;
     if (newBest) {
-      const nb = this.add.text(W / 2, 218, t().newBest, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#ffcc00',
-        stroke: '#885500', strokeThickness: 2,
+      const nb = this.add.text(W / 2, 436, t().newBest, {
+        fontSize: '28px', fontFamily: 'monospace', color: '#ffcc00',
+        stroke: '#885500', strokeThickness: 4,
       }).setOrigin(0.5);
       this.tweens.add({ targets: nb, alpha: 0.25, duration: 550, yoyo: true, repeat: -1 });
     } else {
-      this.add.text(W / 2, 218, `${t().best}  ${this.best}`, {
-        fontSize: '13px', fontFamily: 'monospace', color: '#334455',
+      this.add.text(W / 2, 436, `${t().best}  ${this.best}`, {
+        fontSize: '26px', fontFamily: 'monospace', color: '#334455',
       }).setOrigin(0.5);
     }
 
     /* ---- Divider ---- */
-    this._divider(240);
+    this._divider(480);
 
     /* ---- Stat row: level / time / combo ---- */
     this._statRow(H * 0.38);
@@ -111,36 +111,36 @@ export class GameOverScene extends Phaser.Scene {
     this._divider(H * 0.57);
 
     /* ---- Buttons ---- */
-    this._makeButton(W / 2, H * 0.645, t().watchAd, '#ffcc00', 210, 38,
+    this._makeButton(W / 2, H * 0.645, t().watchAd, '#ffcc00', 420, 76,
       () => this._showAdPlaceholder());
 
-    this._makeButton(W / 2, H * 0.735, t().playAgain, '#00ffff', 180, 40,
+    this._makeButton(W / 2, H * 0.735, t().playAgain, '#00ffff', 360, 80,
       () => this.scene.start('GameScene', { skin: this.skinIndex }));
 
-    this._makeButton(W / 2, H * 0.825, t().menu, '#ff2060', 120, 34,
+    this._makeButton(W / 2, H * 0.825, t().menu, '#ff2060', 240, 68,
       () => this.scene.start('StartScene'));
 
     /* ---- Bottom accent ---- */
-    this.add.rectangle(W / 2, H, W, 3, 0xff2060, 1);
+    this.add.rectangle(W / 2, H, W, 6, 0xff2060, 1);
   }
 
   /* -------- helpers -------- */
 
   private _divider(y: number) {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x112233, 0.7);
-    g.lineBetween(24, y, GAME_WIDTH - 24, y);
+    g.lineStyle(2, 0x112233, 0.7);
+    g.lineBetween(48, y, GAME_WIDTH - 48, y);
   }
 
   private _statRow(cy: number) {
     const W = GAME_WIDTH;
     const col = (x: number, value: string, label: string, color: string) => {
-      this.add.text(x, cy - 10, value, {
-        fontSize: '18px', fontFamily: 'monospace', color,
-        stroke: color, strokeThickness: 1,
+      this.add.text(x, cy - 20, value, {
+        fontSize: '36px', fontFamily: 'monospace', color,
+        stroke: color, strokeThickness: 2,
       }).setOrigin(0.5);
-      this.add.text(x, cy + 12, label, {
-        fontSize: '10px', fontFamily: 'monospace', color: '#445566', letterSpacing: 2,
+      this.add.text(x, cy + 24, label, {
+        fontSize: '20px', fontFamily: 'monospace', color: '#445566', letterSpacing: 2,
       }).setOrigin(0.5);
     };
 
@@ -155,16 +155,16 @@ export class GameOverScene extends Phaser.Scene {
     const totalTime   = parseFloat(localStorage.getItem(STORAGE_TOTAL_TIME) || '0');
     const maxComboAll = parseInt(localStorage.getItem(STORAGE_MAX_COMBO) || '0', 10);
 
-    this.add.text(W / 2, cy - 18, t().allTime, {
-      fontSize: '10px', fontFamily: 'monospace', color: '#223344', letterSpacing: 4,
+    this.add.text(W / 2, cy - 36, t().allTime, {
+      fontSize: '20px', fontFamily: 'monospace', color: '#223344', letterSpacing: 4,
     }).setOrigin(0.5);
 
     const col = (x: number, value: string, label: string) => {
       this.add.text(x, cy, value, {
-        fontSize: '14px', fontFamily: 'monospace', color: '#556677',
+        fontSize: '28px', fontFamily: 'monospace', color: '#556677',
       }).setOrigin(0.5);
-      this.add.text(x, cy + 18, label, {
-        fontSize: '9px', fontFamily: 'monospace', color: '#2a3a4a', letterSpacing: 1,
+      this.add.text(x, cy + 36, label, {
+        fontSize: '18px', fontFamily: 'monospace', color: '#2a3a4a', letterSpacing: 1,
       }).setOrigin(0.5);
     };
 
@@ -177,11 +177,11 @@ export class GameOverScene extends Phaser.Scene {
     const phColor = Phaser.Display.Color.HexStringToColor(color).color;
 
     const btn = this.add.rectangle(x, y, w, h, 0x000000, 0)
-      .setStrokeStyle(2, phColor, 1)
+      .setStrokeStyle(4, phColor, 1)
       .setInteractive({ useHandCursor: true });
 
     const txt = this.add.text(x, y, label, {
-      fontSize: '13px', fontFamily: 'monospace', color,
+      fontSize: '26px', fontFamily: 'monospace', color,
     }).setOrigin(0.5);
 
     btn.on('pointerover', () => btn.setFillStyle(phColor, 0.14));
@@ -194,28 +194,28 @@ export class GameOverScene extends Phaser.Scene {
 
   private _drawGrid() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0x001122, 0.18);
-    for (let x = 0; x <= GAME_WIDTH; x += 40) g.lineBetween(x, 0, x, GAME_HEIGHT);
-    for (let y = 0; y <= GAME_HEIGHT; y += 40) g.lineBetween(0, y, GAME_WIDTH, y);
+    g.lineStyle(2, 0x001122, 0.18);
+    for (let x = 0; x <= GAME_WIDTH; x += 80) g.lineBetween(x, 0, x, GAME_HEIGHT);
+    for (let y = 0; y <= GAME_HEIGHT; y += 80) g.lineBetween(0, y, GAME_WIDTH, y);
   }
 
   private _showAdPlaceholder() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.94).setDepth(100);
     this.add.rectangle(W / 2, H / 2, W * 0.82, H * 0.38, 0x0a0a18, 1)
-      .setStrokeStyle(2, 0xffcc00, 1).setDepth(101);
+      .setStrokeStyle(4, 0xffcc00, 1).setDepth(101);
 
     this.add.text(W / 2, H * 0.38, t().adTitle, {
-      fontSize: '15px', fontFamily: 'monospace', color: '#ffcc00',
+      fontSize: '30px', fontFamily: 'monospace', color: '#ffcc00',
     }).setOrigin(0.5).setDepth(102);
 
     this.add.text(W / 2, H * 0.46, t().adBody, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#667788', align: 'center',
+      fontSize: '24px', fontFamily: 'monospace', color: '#667788', align: 'center',
     }).setOrigin(0.5).setDepth(102);
 
     let countdown = 5;
     const cTxt = this.add.text(W / 2, H * 0.55, `${t().closeIn} ${countdown}s`, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#334455',
+      fontSize: '24px', fontFamily: 'monospace', color: '#334455',
     }).setOrigin(0.5).setDepth(102);
 
     const timer = this.time.addEvent({

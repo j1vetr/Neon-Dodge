@@ -1,8 +1,6 @@
 
 /* =========================================================
-   START SCENE — NEON DODGE
-   Title typography preserved. Lower section fully redesigned:
-   rocket-card + skin picker + big play + settings gear panel.
+   START SCENE — NEON DODGE  —  800×1400 HD resolution
    ========================================================= */
 
 import Phaser from 'phaser';
@@ -44,11 +42,11 @@ export class StartScene extends Phaser.Scene {
   private glitchTexts: Phaser.GameObjects.Text[] = [];
 
   /* Card / color tiles */
-  private skinGfx!:         Phaser.GameObjects.Graphics;
-  private cardBorderGfx!:   Phaser.GameObjects.Graphics;
+  private skinGfx!:          Phaser.GameObjects.Graphics;
+  private cardBorderGfx!:    Phaser.GameObjects.Graphics;
   private selectedColorTxt!: Phaser.GameObjects.Text;
-  private readonly TILE = 32;
-  private readonly TGAP = 52;
+  private readonly TILE = 64;
+  private readonly TGAP = 104;
   private tileY  = 0;
   private tileX0 = 0;
 
@@ -90,9 +88,9 @@ export class StartScene extends Phaser.Scene {
       const cols = [skin.color, 0xffffff, 0xff8800, 0xffff00];
       const c    = cols[Math.floor(Math.random() * cols.length)];
       const dot  = this.add.circle(
-        this.floatingPlayer.x + Phaser.Math.Between(-4, 4),
-        this.floatingPlayer.y + 27 + Phaser.Math.Between(0, 5),
-        Phaser.Math.Between(2, 4), c, 0.7,
+        this.floatingPlayer.x + Phaser.Math.Between(-8, 8),
+        this.floatingPlayer.y + 54 + Phaser.Math.Between(0, 10),
+        Phaser.Math.Between(4, 8), c, 0.7,
       );
       this.playerTrail.push(dot);
       if (this.playerTrail.length > 10) this.playerTrail.shift()?.destroy();
@@ -115,17 +113,17 @@ export class StartScene extends Phaser.Scene {
     for (let i = 0; i <= 10; i++) {
       const t2 = (i / 10) ** 1.8;
       const y  = vY + (H - vY) * t2;
-      g.lineStyle(1, 0x00aaff, 0.06 + t2 * 0.18);
+      g.lineStyle(2, 0x00aaff, 0.06 + t2 * 0.18);
       g.lineBetween(0, y, W, y);
     }
     for (let i = 0; i <= 12; i++) {
       const bx = (i / 12) * W;
-      g.lineStyle(1, 0x00aaff, 0.06 + 0.10 * Math.abs(i - 6) / 6);
+      g.lineStyle(2, 0x00aaff, 0.06 + 0.10 * Math.abs(i - 6) / 6);
       g.lineBetween(vX, vY, bx, H);
     }
-    g.lineStyle(1, 0x001a33, 0.22);
-    for (let x = 0; x <= W; x += 40) g.lineBetween(x, 0, x, vY);
-    for (let y = 0; y <= vY; y += 40) g.lineBetween(0, y, W, y);
+    g.lineStyle(2, 0x001a33, 0.22);
+    for (let x = 0; x <= W; x += 80) g.lineBetween(x, 0, x, vY);
+    for (let y = 0; y <= vY; y += 80) g.lineBetween(0, y, W, y);
   }
 
   /* --------------------------------------------------------
@@ -136,7 +134,7 @@ export class StartScene extends Phaser.Scene {
     for (let i = 0; i < 90; i++) {
       const x   = Phaser.Math.Between(0, GAME_WIDTH);
       const y   = Phaser.Math.Between(0, GAME_HEIGHT * 0.58);
-      const r   = Math.random() * 1.4 + 0.3;
+      const r   = Math.random() * 2.8 + 0.6;
       const col = palette[Math.floor(Math.random() * palette.length)];
       const a   = Math.random() * 0.55 + 0.08;
       const star = this.add.circle(x, y, r, col, a);
@@ -153,14 +151,14 @@ export class StartScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _drawScanlines() {
     const g = this.add.graphics().setAlpha(0.04);
-    for (let y = 0; y < GAME_HEIGHT; y += 4) {
+    for (let y = 0; y < GAME_HEIGHT; y += 8) {
       g.fillStyle(0x000000, 1);
-      g.fillRect(0, y, GAME_WIDTH, 2);
+      g.fillRect(0, y, GAME_WIDTH, 4);
     }
   }
 
   /* --------------------------------------------------------
-     TITLE  ← preserved exactly
+     TITLE
   -------------------------------------------------------- */
   private _buildTitle() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
@@ -170,14 +168,14 @@ export class StartScene extends Phaser.Scene {
     const tagY   = H * 0.324;
 
     const dg = this.add.graphics();
-    dg.lineStyle(1, 0x00eeff, 0.38);
-    dg.lineBetween(cx - 102, neonY - 24, cx - 8, neonY - 24);
-    dg.lineBetween(cx +   8, neonY - 24, cx + 102, neonY - 24);
-    _diamond(dg, cx, neonY - 24, 4, 0x00eeff, 0.7);
-    dg.lineStyle(1, 0xff22aa, 0.35);
-    dg.lineBetween(cx - 122, dodgeY + 52, cx - 8, dodgeY + 52);
-    dg.lineBetween(cx +   8, dodgeY + 52, cx + 122, dodgeY + 52);
-    _diamond(dg, cx, dodgeY + 52, 4, 0xff22aa, 0.6);
+    dg.lineStyle(2, 0x00eeff, 0.38);
+    dg.lineBetween(cx - 204, neonY - 48, cx - 16, neonY - 48);
+    dg.lineBetween(cx +  16, neonY - 48, cx + 204, neonY - 48);
+    _diamond(dg, cx, neonY - 48, 8, 0x00eeff, 0.7);
+    dg.lineStyle(2, 0xff22aa, 0.35);
+    dg.lineBetween(cx - 244, dodgeY + 104, cx - 16, dodgeY + 104);
+    dg.lineBetween(cx +  16, dodgeY + 104, cx + 244, dodgeY + 104);
+    _diamond(dg, cx, dodgeY + 104, 8, 0xff22aa, 0.6);
 
     const SCRAMBLE = '!@#&%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const floatAll: Phaser.GameObjects.GameObject[] = [dg];
@@ -194,7 +192,7 @@ export class StartScene extends Phaser.Scene {
         color: BG,
         stroke: outlineColor,
         strokeThickness: strokeW,
-        shadow: { color: outlineColor, blur: 10, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
+        shadow: { color: outlineColor, blur: 20, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5).setAlpha(0);
 
       this.time.delayedCall(startDelay, () => {
@@ -228,26 +226,26 @@ export class StartScene extends Phaser.Scene {
     };
 
     const NEON = ['N', 'E', 'O', 'N'];
-    const nSp = 28, nSt = cx - ((NEON.length - 1) / 2) * nSp;
+    const nSp = 56, nSt = cx - ((NEON.length - 1) / 2) * nSp;
     const neonLetters = NEON.map((ch, i) =>
-      spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', 24, 1.5, 40 + i * 80));
+      spawnChar(ch, nSt + i * nSp, neonY, '#00eeff', 48, 3, 40 + i * 80));
     this.titleNeon = neonLetters[neonLetters.length - 1];
 
     const DODGE = ['D', 'O', 'D', 'G', 'E'];
-    const dSp = 56, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
+    const dSp = 112, dSt = cx - ((DODGE.length - 1) / 2) * dSp;
     const dodgeLetters = DODGE.map((ch, i) =>
-      spawnChar(ch, dSt + i * dSp, dodgeY, '#ff22aa', 66, 2, 280 + i * 75));
+      spawnChar(ch, dSt + i * dSp, dodgeY, '#ff22aa', 132, 4, 280 + i * 75));
     this.titleDodge = dodgeLetters[dodgeLetters.length - 1];
 
     const tag = this.add.text(cx, tagY, 'S U R V I V E   T H E   N E O N', {
-      fontSize: '8px', fontFamily: 'monospace', color: '#253340', letterSpacing: 2,
+      fontSize: '16px', fontFamily: 'monospace', color: '#253340', letterSpacing: 2,
     }).setOrigin(0.5).setAlpha(0);
     floatAll.push(tag);
     this.time.delayedCall(1100, () =>
       this.tweens.add({ targets: tag, alpha: 0.55, duration: 600 }));
     this.time.delayedCall(1300, () => {
       this.tweens.add({
-        targets: floatAll, y: '-=7',
+        targets: floatAll, y: '-=14',
         duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
     });
@@ -263,20 +261,20 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     GLITCH  ← preserved exactly
+     GLITCH
   -------------------------------------------------------- */
   private _fireGlitch() {
     this.glitchActive = true;
     const W = GAME_WIDTH;
     const texts  = ['NEON', 'DODGE'];
     const yPos   = [GAME_HEIGHT * 0.167, GAME_HEIGHT * 0.232];
-    const sizes  = ['22px', '72px'];
+    const sizes  = ['44px', '144px'];
     const tints  = ['#ff0044', '#00ffff', '#ffee00'];
 
     for (const tint of tints) {
       for (let l = 0; l < 2; l++) {
-        const ox = Phaser.Math.Between(-8, 8);
-        const oy = Phaser.Math.Between(-3, 3);
+        const ox = Phaser.Math.Between(-16, 16);
+        const oy = Phaser.Math.Between(-6, 6);
         const gt = this.add.text(W / 2 + ox, yPos[l] + oy, texts[l], {
           fontSize: sizes[l],
           fontFamily: '"Arial Black", "Arial Bold", sans-serif',
@@ -285,7 +283,7 @@ export class StartScene extends Phaser.Scene {
         this.glitchTexts.push(gt);
       }
     }
-    const shift = Phaser.Math.Between(-5, 5);
+    const shift = Phaser.Math.Between(-10, 10);
     const origN = this.titleNeon.x, origD = this.titleDodge.x;
     this.titleNeon.x  = origN + shift;
     this.titleDodge.x = origD - shift;
@@ -300,7 +298,7 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     BEST SCORE  — elegant neon line
+     BEST SCORE
   -------------------------------------------------------- */
   private _buildBestScore() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
@@ -308,22 +306,22 @@ export class StartScene extends Phaser.Scene {
     const y   = H * 0.381;
 
     const g = this.add.graphics();
-    g.lineStyle(1, 0x00ffff, 0.09);
-    g.lineBetween(W * 0.08, y - 13, W * 0.92, y - 13);
+    g.lineStyle(2, 0x00ffff, 0.09);
+    g.lineBetween(W * 0.08, y - 26, W * 0.92, y - 26);
 
     if (hi > 0) {
       this.add.text(W / 2, y, `★  ${t().best.toUpperCase()}  ${hi}`, {
-        fontSize: '14px',
+        fontSize: '28px',
         fontFamily: '"Orbitron", monospace',
         fontStyle: 'bold',
         color: '#050510',
         stroke: '#00ddcc',
-        strokeThickness: 1.2,
-        shadow: { color: '#00ffcc', blur: 8, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
+        strokeThickness: 2.4,
+        shadow: { color: '#00ffcc', blur: 16, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5);
     } else {
       this.add.text(W / 2, y, t().noRecord, {
-        fontSize: '10px', fontFamily: 'monospace', color: '#182530', letterSpacing: 2,
+        fontSize: '20px', fontFamily: 'monospace', color: '#182530', letterSpacing: 2,
       }).setOrigin(0.5);
     }
   }
@@ -335,9 +333,9 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX       = W / 2;
     const CARD_TOP = H * 0.406;
-    const CARD_W   = W - 36;
-    const CARD_H   = 224;
-    const R        = 14;
+    const CARD_W   = W - 72;
+    const CARD_H   = 448;
+    const R        = 28;
 
     /* ── Background ── */
     const cbg = this.add.graphics();
@@ -350,48 +348,48 @@ export class StartScene extends Phaser.Scene {
 
     /* ── Subtle inner top line ── */
     const tl = this.add.graphics();
-    tl.lineStyle(1, 0x00ffff, 0.14);
-    tl.lineBetween(CX - CARD_W / 2 + R, CARD_TOP + 1, CX + CARD_W / 2 - R, CARD_TOP + 1);
+    tl.lineStyle(2, 0x00ffff, 0.14);
+    tl.lineBetween(CX - CARD_W / 2 + R, CARD_TOP + 2, CX + CARD_W / 2 - R, CARD_TOP + 2);
 
     /* ── Rocket preview ── */
-    const rocketY = CARD_TOP + 58;
+    const rocketY = CARD_TOP + 116;
     const skin = SKINS[this.selectedSkin];
 
-    const rGlow = this.add.circle(CX, rocketY, 34, skin.color, 0.07);
+    const rGlow = this.add.circle(CX, rocketY, 68, skin.color, 0.07);
     this.tweens.add({
       targets: rGlow, alpha: { from: 0.07, to: 0.02 }, scaleX: 1.35, scaleY: 1.35,
       duration: 1050, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     this.floatingPlayerImg = this.add.image(0, 0, 'player-rocket')
-      .setDisplaySize(52, 60).setTint(skin.color);
+      .setDisplaySize(104, 120).setTint(skin.color);
     this.floatingPlayer = this.add.container(CX, rocketY, [this.floatingPlayerImg]);
     this.tweens.add({
-      targets: [this.floatingPlayer, rGlow], y: '-=11',
+      targets: [this.floatingPlayer, rGlow], y: '-=22',
       duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
 
     /* ── Big color name — changes on selection ── */
-    this.selectedColorTxt = this.add.text(CX, CARD_TOP + 114, t().skinNames[this.selectedSkin], {
-      fontSize: '22px',
+    this.selectedColorTxt = this.add.text(CX, CARD_TOP + 228, t().skinNames[this.selectedSkin], {
+      fontSize: '44px',
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
       color: skin.hex,
     }).setOrigin(0.5);
 
     /* ── Thin rule + "RENK SEÇ" label ── */
-    const ruleY = CARD_TOP + 141;
+    const ruleY = CARD_TOP + 282;
     const rule = this.add.graphics();
-    rule.lineStyle(1, 0x00ffff, 0.1);
-    rule.lineBetween(CX - 106, ruleY, CX + 106, ruleY);
+    rule.lineStyle(2, 0x00ffff, 0.1);
+    rule.lineBetween(CX - 212, ruleY, CX + 212, ruleY);
 
-    this.add.text(CX, ruleY + 14, t().selectSkin, {
-      fontSize: '9px', fontFamily: 'monospace', color: '#243038', letterSpacing: 4,
+    this.add.text(CX, ruleY + 28, t().selectSkin, {
+      fontSize: '18px', fontFamily: 'monospace', color: '#243038', letterSpacing: 4,
     }).setOrigin(0.5);
 
     /* ── Color tiles ── */
     const TILE  = this.TILE, TGAP = this.TGAP;
-    const tileY = CARD_TOP + 188;
+    const tileY = CARD_TOP + 376;
     const tileX0 = CX - ((SKINS.length - 1) / 2) * TGAP;
     this.tileY  = tileY;
     this.tileX0 = tileX0;
@@ -401,7 +399,7 @@ export class StartScene extends Phaser.Scene {
     for (let i = 0; i < SKINS.length; i++) {
       const x = tileX0 + i * TGAP;
 
-      const hit = this.add.rectangle(x, tileY, TILE + 12, TILE + 12, 0xffffff, 0)
+      const hit = this.add.rectangle(x, tileY, TILE + 24, TILE + 24, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
       hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.05); });
       hit.on('pointerout',  () => hit.setFillStyle(0xffffff, 0));
@@ -421,13 +419,13 @@ export class StartScene extends Phaser.Scene {
   private _drawCardBorder() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CARD_TOP = H * 0.406;
-    const CARD_W   = W - 36;
-    const CARD_H   = 224;
+    const CARD_W   = W - 72;
+    const CARD_H   = 448;
     const col = SKINS[this.selectedSkin].color;
     const g = this.cardBorderGfx;
     g.clear();
-    g.lineStyle(1.5, col, 0.38);
-    g.strokeRoundedRect(W / 2 - CARD_W / 2, CARD_TOP, CARD_W, CARD_H, 14);
+    g.lineStyle(3, col, 0.38);
+    g.strokeRoundedRect(W / 2 - CARD_W / 2, CARD_TOP, CARD_W, CARD_H, 28);
   }
 
   /* ── Color tiles ── */
@@ -436,7 +434,7 @@ export class StartScene extends Phaser.Scene {
     g.clear();
     const S = this.TILE, sp = this.TGAP;
     const cy = this.tileY, sx = this.tileX0;
-    const r  = 6;
+    const r  = 12;
     for (let i = 0; i < SKINS.length; i++) {
       const x   = sx + i * sp;
       const col = SKINS[i].color;
@@ -445,12 +443,12 @@ export class StartScene extends Phaser.Scene {
       if (sel) {
         g.fillStyle(col, 1);
         g.fillRoundedRect(x - h, cy - h, S, S, r);
-        g.lineStyle(2, 0xffffff, 0.55);
+        g.lineStyle(4, 0xffffff, 0.55);
         g.strokeRoundedRect(x - h, cy - h, S, S, r);
       } else {
         g.fillStyle(col, 0.18);
         g.fillRoundedRect(x - h, cy - h, S, S, r);
-        g.lineStyle(1, col, 0.35);
+        g.lineStyle(2, col, 0.35);
         g.strokeRoundedRect(x - h, cy - h, S, S, r);
       }
     }
@@ -477,34 +475,34 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX = W / 2;
     const cy  = H * 0.787;
-    const BW  = W - 36;
-    const BH  = 58;
+    const BW  = W - 72;
+    const BH  = 116;
 
     /* Glow aura */
     const aura = this.add.graphics();
-    aura.lineStyle(14, 0x00ffff, 0.05);
-    aura.strokeRoundedRect(CX - BW/2 - 7, cy - BH/2 - 7, BW+14, BH+14, 14);
-    aura.lineStyle(5, 0x00ffff, 0.1);
-    aura.strokeRoundedRect(CX - BW/2 - 2, cy - BH/2 - 2, BW+4, BH+4, 12);
+    aura.lineStyle(28, 0x00ffff, 0.05);
+    aura.strokeRoundedRect(CX - BW/2 - 14, cy - BH/2 - 14, BW+28, BH+28, 28);
+    aura.lineStyle(10, 0x00ffff, 0.1);
+    aura.strokeRoundedRect(CX - BW/2 - 4, cy - BH/2 - 4, BW+8, BH+8, 24);
 
     /* Fill + border */
     const fill   = this.add.graphics();
     fill.fillStyle(0x00ffff, 0.07);
-    fill.fillRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 10);
+    fill.fillRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 20);
 
     const border = this.add.graphics();
-    border.lineStyle(2, 0x00ffff, 1);
-    border.strokeRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 10);
+    border.lineStyle(4, 0x00ffff, 1);
+    border.strokeRoundedRect(CX - BW/2, cy - BH/2, BW, BH, 20);
 
     /* Label */
     const label = this.add.text(CX, cy, t().play, {
-      fontSize: '22px',
+      fontSize: '44px',
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
       color: '#050510',
       stroke: '#00ffff',
-      strokeThickness: 1.5,
-      shadow: { color: '#00ffff', blur: 10, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
+      strokeThickness: 3,
+      shadow: { color: '#00ffff', blur: 20, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
 
     /* Hit area */
@@ -537,12 +535,12 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     SETTINGS GEAR BUTTON  — PNG image, continuously spins
+     SETTINGS GEAR BUTTON
   -------------------------------------------------------- */
   private _buildSettingsBtn() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const cx = W / 2, cy = H * 0.901;
-    const SIZE = 38;
+    const SIZE = 76;
 
     /* PNG icon — tinted cyan, constant slow rotation */
     const icon = this.add.image(cx, cy, 'icon-settings')
@@ -559,8 +557,8 @@ export class StartScene extends Phaser.Scene {
       ease: 'Linear',
     });
 
-    /* Hover: brighten + speed up (alpha pulse) */
-    const hit = this.add.circle(cx, cy, SIZE / 2 + 6, 0xffffff, 0)
+    /* Hover: brighten */
+    const hit = this.add.circle(cx, cy, SIZE / 2 + 12, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
 
     hit.on('pointerover', () => icon.setAlpha(1).setTint(0x00ffff));
@@ -569,13 +567,13 @@ export class StartScene extends Phaser.Scene {
   }
 
   /* --------------------------------------------------------
-     SETTINGS PANEL  — overlay modal, hidden by default
+     SETTINGS PANEL  — overlay modal
   -------------------------------------------------------- */
   private _buildSettingsPanel() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX = W / 2;
     const py  = H * 0.494;
-    const PW  = 284, PH = 292;
+    const PW  = 568, PH = 584;
     const D   = 90;
 
     const push = <T extends Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>(o: T) => {
@@ -597,40 +595,40 @@ export class StartScene extends Phaser.Scene {
     /* ── Panel background ── */
     const pbg = this.add.graphics().setDepth(D);
     pbg.fillStyle(0x07091e, 0.97);
-    pbg.fillRoundedRect(CX - PW/2, py - PH/2, PW, PH, 14);
-    pbg.lineStyle(1.5, 0x00ffff, 0.45);
-    pbg.strokeRoundedRect(CX - PW/2, py - PH/2, PW, PH, 14);
+    pbg.fillRoundedRect(CX - PW/2, py - PH/2, PW, PH, 28);
+    pbg.lineStyle(3, 0x00ffff, 0.45);
+    pbg.strokeRoundedRect(CX - PW/2, py - PH/2, PW, PH, 28);
     /* Inner top accent */
-    pbg.lineStyle(1, 0x00ffff, 0.18);
-    pbg.lineBetween(CX - PW/2 + 14, py - PH/2 + 1, CX + PW/2 - 14, py - PH/2 + 1);
+    pbg.lineStyle(2, 0x00ffff, 0.18);
+    pbg.lineBetween(CX - PW/2 + 28, py - PH/2 + 2, CX + PW/2 - 28, py - PH/2 + 2);
     push(pbg);
 
     /* ── Title ── */
-    push(this.add.text(CX, py - PH/2 + 28, t().settings, {
-      fontSize: '16px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
-      color: '#050510', stroke: '#00ffff', strokeThickness: 1.5,
+    push(this.add.text(CX, py - PH/2 + 56, t().settings, {
+      fontSize: '32px', fontFamily: '"Orbitron", monospace', fontStyle: 'bold',
+      color: '#050510', stroke: '#00ffff', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(D));
 
     /* ── Rule 1 ── */
     const rule1 = this.add.graphics().setDepth(D);
-    rule1.lineStyle(1, 0x00ffff, 0.14);
-    rule1.lineBetween(CX - PW/2 + 18, py - PH/2 + 52, CX + PW/2 - 18, py - PH/2 + 52);
+    rule1.lineStyle(2, 0x00ffff, 0.14);
+    rule1.lineBetween(CX - PW/2 + 36, py - PH/2 + 104, CX + PW/2 - 36, py - PH/2 + 104);
     push(rule1);
 
     /* ── Language section ── */
-    push(this.add.text(CX, py - PH/2 + 72, t().language, {
-      fontSize: '9px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
+    push(this.add.text(CX, py - PH/2 + 144, t().language, {
+      fontSize: '18px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
     }).setOrigin(0.5).setDepth(D));
 
     const lang  = getLang();
-    const FS    = 36;
-    const trX   = CX - FS / 2 - 14, enX = CX + FS / 2 + 14;
-    const flagY = py - PH/2 + 108;
+    const FS    = 72;
+    const trX   = CX - FS / 2 - 28, enX = CX + FS / 2 + 28;
+    const flagY = py - PH/2 + 216;
 
-    const ringTr = push(this.add.circle(trX, flagY, FS/2 + 5, 0x000000, 0)
-      .setStrokeStyle(lang === 'tr' ? 2 : 0, 0x00ffff, 1).setDepth(D));
-    const ringEn = push(this.add.circle(enX, flagY, FS/2 + 5, 0x000000, 0)
-      .setStrokeStyle(lang === 'en' ? 2 : 0, 0x00ffff, 1).setDepth(D));
+    const ringTr = push(this.add.circle(trX, flagY, FS/2 + 10, 0x000000, 0)
+      .setStrokeStyle(lang === 'tr' ? 4 : 0, 0x00ffff, 1).setDepth(D));
+    const ringEn = push(this.add.circle(enX, flagY, FS/2 + 10, 0x000000, 0)
+      .setStrokeStyle(lang === 'en' ? 4 : 0, 0x00ffff, 1).setDepth(D));
 
     const flagTr = push(this.add.image(trX, flagY, 'flag-tr')
       .setDisplaySize(FS, FS).setAlpha(lang === 'tr' ? 1 : 0.4)
@@ -651,25 +649,25 @@ export class StartScene extends Phaser.Scene {
 
     /* ── Rule 2 ── */
     const rule2 = this.add.graphics().setDepth(D);
-    rule2.lineStyle(1, 0x00ffff, 0.1);
-    rule2.lineBetween(CX - PW/2 + 18, py - PH/2 + 150, CX + PW/2 - 18, py - PH/2 + 150);
+    rule2.lineStyle(2, 0x00ffff, 0.1);
+    rule2.lineBetween(CX - PW/2 + 36, py - PH/2 + 300, CX + PW/2 - 36, py - PH/2 + 300);
     push(rule2);
 
     /* ── Sound section ── */
-    push(this.add.text(CX, py - PH/2 + 168, t().sound, {
-      fontSize: '9px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
+    push(this.add.text(CX, py - PH/2 + 336, t().sound, {
+      fontSize: '18px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
     }).setOrigin(0.5).setDepth(D));
 
     const soundOn  = localStorage.getItem(STORAGE_SOUND) !== 'off';
-    const ICO      = 36;
-    const onX      = CX - ICO / 2 - 22;
-    const offX     = CX + ICO / 2 + 22;
-    const soundY   = py - PH/2 + 206;
+    const ICO      = 72;
+    const onX      = CX - ICO / 2 - 44;
+    const offX     = CX + ICO / 2 + 44;
+    const soundY   = py - PH/2 + 412;
 
-    const ringOn  = push(this.add.circle(onX, soundY, ICO / 2 + 4, 0x000000, 0)
-      .setStrokeStyle(soundOn ? 2 : 0, 0x00ffcc, 1).setDepth(D));
-    const ringOff = push(this.add.circle(offX, soundY, ICO / 2 + 4, 0x000000, 0)
-      .setStrokeStyle(!soundOn ? 2 : 0, 0xff4477, 1).setDepth(D));
+    const ringOn  = push(this.add.circle(onX, soundY, ICO / 2 + 8, 0x000000, 0)
+      .setStrokeStyle(soundOn ? 4 : 0, 0x00ffcc, 1).setDepth(D));
+    const ringOff = push(this.add.circle(offX, soundY, ICO / 2 + 8, 0x000000, 0)
+      .setStrokeStyle(!soundOn ? 4 : 0, 0xff4477, 1).setDepth(D));
 
     const iconOn = push(this.add.image(onX, soundY, 'icon-sound-on')
       .setDisplaySize(ICO, ICO)
@@ -687,8 +685,8 @@ export class StartScene extends Phaser.Scene {
       setSoundEnabled(on);
       iconOn .setTint(on  ? 0x00ffcc : 0x334455).setAlpha(on  ? 1 : 0.28);
       iconOff.setTint(!on ? 0xff4477 : 0x334455).setAlpha(!on ? 1 : 0.28);
-      (ringOn  as Phaser.GameObjects.Arc).setStrokeStyle(on  ? 2 : 0, 0x00ffcc, 1);
-      (ringOff as Phaser.GameObjects.Arc).setStrokeStyle(!on ? 2 : 0, 0xff4477, 1);
+      (ringOn  as Phaser.GameObjects.Arc).setStrokeStyle(on  ? 4 : 0, 0x00ffcc, 1);
+      (ringOff as Phaser.GameObjects.Arc).setStrokeStyle(!on ? 4 : 0, 0xff4477, 1);
     };
 
     iconOn .on('pointerdown', () => applySound(true));
@@ -696,26 +694,26 @@ export class StartScene extends Phaser.Scene {
 
     /* ── Rule 3 ── */
     const rule3 = this.add.graphics().setDepth(D);
-    rule3.lineStyle(1, 0x00ffff, 0.1);
-    rule3.lineBetween(CX - PW/2 + 18, py - PH/2 + 238, CX + PW/2 - 18, py - PH/2 + 238);
+    rule3.lineStyle(2, 0x00ffff, 0.1);
+    rule3.lineBetween(CX - PW/2 + 36, py - PH/2 + 476, CX + PW/2 - 36, py - PH/2 + 476);
     push(rule3);
 
     /* ── Close button ── */
     const closeBg = push(this.add.graphics().setDepth(D));
-    const closeY  = py - PH/2 + 260;
+    const closeY  = py - PH/2 + 520;
     const drawClose = (hover: boolean) => {
       closeBg.clear();
-      closeBg.lineStyle(1.5, 0xff4477, hover ? 1 : 0.7);
-      closeBg.strokeRoundedRect(CX - 60, closeY - 15, 120, 30, 7);
-      if (hover) { closeBg.fillStyle(0xff4477, 0.12); closeBg.fillRoundedRect(CX - 60, closeY - 15, 120, 30, 7); }
+      closeBg.lineStyle(3, 0xff4477, hover ? 1 : 0.7);
+      closeBg.strokeRoundedRect(CX - 120, closeY - 30, 240, 60, 14);
+      if (hover) { closeBg.fillStyle(0xff4477, 0.12); closeBg.fillRoundedRect(CX - 120, closeY - 30, 240, 60, 14); }
     };
     drawClose(false);
 
     push(this.add.text(CX, closeY, t().close, {
-      fontSize: '12px', fontFamily: 'monospace', color: '#ff4477',
+      fontSize: '24px', fontFamily: 'monospace', color: '#ff4477',
     }).setOrigin(0.5).setDepth(D));
 
-    const closeHit = push(this.add.rectangle(CX, closeY, 130, 36, 0xffffff, 0)
+    const closeHit = push(this.add.rectangle(CX, closeY, 260, 72, 0xffffff, 0)
       .setInteractive({ useHandCursor: true }).setDepth(D));
     closeHit.on('pointerover', () => drawClose(true));
     closeHit.on('pointerout',  () => drawClose(false));
