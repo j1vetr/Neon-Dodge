@@ -232,7 +232,15 @@ export class GameOverScene extends Phaser.Scene {
         this.children.list
           .filter(c => ((c as { depth?: number }).depth ?? 0) >= 100)
           .forEach(c => c.destroy());
-        this.scene.start('GameScene', { skin: this.skinIndex });
+        /* Kaldığı yerden devam: mevcut score, level, elapsedTime'ı geri ver + kalkan */
+        this.scene.start('GameScene', {
+          skin:        this.skinIndex,
+          revive:      true,
+          score:       this.score,
+          level:       this.levelReached - 1,   /* 0-tabanlı level index */
+          elapsedTime: this.elapsedTime,
+          maxCombo:    this.maxCombo,
+        });
       });
     });
   }

@@ -131,9 +131,25 @@ export class GameScene extends Phaser.Scene {
 
   constructor() { super({ key: 'GameScene' }); }
 
-  init(data: { skin?: number }) {
+  /* Revive verisi — reklam sonrası kaldığı yerden devam */
+  private reviveData: {
+    active: boolean;
+    score: number;
+    level: number;
+    elapsedTime: number;
+    maxCombo: number;
+  } = { active: false, score: 0, level: 0, elapsedTime: 0, maxCombo: 0 };
+
+  init(data: { skin?: number; revive?: boolean; score?: number; level?: number; elapsedTime?: number; maxCombo?: number }) {
     this.skinIndex = data?.skin ?? 0;
     this.playerColor = SKINS[this.skinIndex].color;
+    this.reviveData = {
+      active:      data?.revive ?? false,
+      score:       data?.score ?? 0,
+      level:       data?.level ?? 0,
+      elapsedTime: data?.elapsedTime ?? 0,
+      maxCombo:    data?.maxCombo ?? 0,
+    };
   }
 
   /* ── Smooth interpolation ── */
@@ -275,8 +291,24 @@ export class GameScene extends Phaser.Scene {
     this.invincibleUntil = 0;
     this.doubleUntil = 0;
 
+    /* ── Revive: reklam sonrası kaldığı yerden devam ── */
+    if (this.reviveData.active) {
+      this.score        = this.reviveData.score;
+      this.scoreDisplay = this.reviveData.score;
+      this.elapsedTime  = this.reviveData.elapsedTime;
+      this.currentLevel = Math.max(0, Math.min(this.reviveData.level, LEVELS.length - 1));
+      this.levelDef     = LEVELS[this.currentLevel];
+      this.maxCombo     = this.reviveData.maxCombo;
+      this.shieldActive = true;
+      /* Kalkan görselini hemen aktifle */
+      this.shieldRing.setStrokeStyle(6, COLOR_SHIELD, 1);
+      this.shieldGlow.setAlpha(0.2);
+      /* Kısa "DEVAM" toast */
+      this._showReviveToast();
+    }
+
     this._updateLevelLabel();
-    startAmbient(0);
+    startAmbient(this.reviveData.active ? this.currentLevel : 0);
   }
 
   /* --------------------------------------------------------
@@ -851,6 +883,35 @@ export class GameScene extends Phaser.Scene {
       targets: t, y: y - 100, alpha: 0,
       duration: 800, ease: 'Power2',
       onComplete: () => t.destroy(),
+    });
+  }
+
+  private _showReviveToast() {
+    const W = GAME_WIDTH;
+    /* Arka panel */
+    const bg = this.add.rectangle(W / 2, 148, 340, 52, 0x003322, 1)
+      .setStrokeStyle(3, 0x44ffaa, 1)
+      .setDepth(60)
+      .setAlpha(0);
+    /* Yazı */
+    const lbl = this.add.text(W / 2, 148, '★  DEVAM  ★', {
+      fontSize: '22px', fontFamily: '"Orbitron", monospace',
+      color: '#44ffaa',
+    }).setOrigin(0.5).setDepth(61).setAlpha(0);
+
+    /* Belir → bekle → kaybol */
+    this.tweens.add({
+      targets: [bg, lbl], alpha: 1,
+      duration: 200, ease: 'Power2',
+      onComplete: () => {
+        this.time.delayedCall(900, () => {
+          this.tweens.add({
+            targets: [bg, lbl], alpha: 0, y: '-=20',
+            duration: 280, ease: 'Power2',
+            onComplete: () => { bg.destroy(); lbl.destroy(); },
+          });
+        });
+      },
     });
   }
 
