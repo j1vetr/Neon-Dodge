@@ -46,7 +46,6 @@ export class StartScene extends Phaser.Scene {
   /* Card / color tiles */
   private skinGfx!:         Phaser.GameObjects.Graphics;
   private cardBorderGfx!:   Phaser.GameObjects.Graphics;
-  private skinNameLabels:   Phaser.GameObjects.Text[] = [];
   private selectedColorTxt!: Phaser.GameObjects.Text;
   private readonly TILE = 32;
   private readonly TGAP = 52;
@@ -378,9 +377,6 @@ export class StartScene extends Phaser.Scene {
       fontFamily: '"Orbitron", monospace',
       fontStyle: 'bold',
       color: skin.hex,
-      stroke: skin.hex,
-      strokeThickness: 0.8,
-      shadow: { color: skin.hex, blur: 16, stroke: true, fill: false, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5);
 
     /* ── Thin rule + "RENK SEÇ" label ── */
@@ -401,21 +397,13 @@ export class StartScene extends Phaser.Scene {
     this.tileX0 = tileX0;
 
     this.skinGfx = this.add.graphics();
-    this.skinNameLabels = [];
 
     for (let i = 0; i < SKINS.length; i++) {
-      const x   = tileX0 + i * TGAP;
-      const isSel = i === this.selectedSkin;
+      const x = tileX0 + i * TGAP;
 
-      const lbl = this.add.text(x, tileY + TILE / 2 + 12, t().skinNames[i], {
-        fontSize: '8px', fontFamily: 'monospace',
-        color: isSel ? SKINS[i].hex : '#1c2d3a',
-      }).setOrigin(0.5);
-      this.skinNameLabels.push(lbl);
-
-      const hit = this.add.rectangle(x, tileY + 8, TILE + 14, TILE + 30, 0xffffff, 0)
+      const hit = this.add.rectangle(x, tileY, TILE + 12, TILE + 12, 0xffffff, 0)
         .setInteractive({ useHandCursor: true });
-      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.04); });
+      hit.on('pointerover', () => { if (i !== this.selectedSkin) hit.setFillStyle(0xffffff, 0.05); });
       hit.on('pointerout',  () => hit.setFillStyle(0xffffff, 0));
       hit.on('pointerdown', () => {
         this.selectedSkin = i;
@@ -455,14 +443,15 @@ export class StartScene extends Phaser.Scene {
       const sel = i === this.selectedSkin;
       const h   = S / 2;
       if (sel) {
-        g.lineStyle(10, col, 0.05); g.strokeRoundedRect(x-h-8, cy-h-8, S+16, S+16, r+5);
-        g.lineStyle(5,  col, 0.13); g.strokeRoundedRect(x-h-4, cy-h-4, S+8,  S+8,  r+3);
-        g.lineStyle(2,  col, 0.45); g.strokeRoundedRect(x-h-1, cy-h-1, S+2,  S+2,  r+1);
-        g.fillStyle(col, 1);        g.fillRoundedRect(x-h, cy-h, S, S, r);
-        g.lineStyle(1.5, 0xffffff, 0.4); g.strokeRoundedRect(x-h+2, cy-h+2, S-4, S-4, r-2);
+        g.fillStyle(col, 1);
+        g.fillRoundedRect(x - h, cy - h, S, S, r);
+        g.lineStyle(2, 0xffffff, 0.55);
+        g.strokeRoundedRect(x - h, cy - h, S, S, r);
       } else {
-        g.fillStyle(col, 0.15);  g.fillRoundedRect(x-h, cy-h, S, S, r);
-        g.lineStyle(1, col, 0.28); g.strokeRoundedRect(x-h, cy-h, S, S, r);
+        g.fillStyle(col, 0.18);
+        g.fillRoundedRect(x - h, cy - h, S, S, r);
+        g.lineStyle(1, col, 0.35);
+        g.strokeRoundedRect(x - h, cy - h, S, S, r);
       }
     }
   }
@@ -472,10 +461,7 @@ export class StartScene extends Phaser.Scene {
     this._drawTiles();
     const skin = SKINS[this.selectedSkin];
     this.selectedColorTxt.setText(t().skinNames[this.selectedSkin]);
-    this.selectedColorTxt.setColor(skin.hex).setStroke(skin.hex, 0.8);
-    for (let i = 0; i < SKINS.length; i++) {
-      this.skinNameLabels[i].setColor(i === this.selectedSkin ? SKINS[i].hex : '#1c2d3a');
-    }
+    this.selectedColorTxt.setColor(skin.hex);
   }
 
   private _updateRocket() {
