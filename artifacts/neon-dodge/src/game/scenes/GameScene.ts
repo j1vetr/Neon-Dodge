@@ -668,11 +668,6 @@ export class GameScene extends Phaser.Scene {
     const icon = this.add.image(x, y, iconKey)
       .setDisplaySize(80, 80)
       .setDepth(7);
-    this.tweens.add({
-      targets: icon,
-      scaleX: 1.08, scaleY: 1.08,
-      duration: 420, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-    });
 
     this.powerUps.push({ icon, ring, type, collected: false });
   }
