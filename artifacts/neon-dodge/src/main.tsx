@@ -13,4 +13,12 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+/* iOS Safari / Android Chrome: dokunuşta sayfa kaymasını tamamen engelle.
+   passive:false zorunlu — aksi halde preventDefault çalışmıyor. */
+const _blockScroll = (e: TouchEvent) => e.preventDefault();
+document.addEventListener('touchstart',  _blockScroll, { passive: false });
+document.addEventListener('touchmove',   _blockScroll, { passive: false });
+document.addEventListener('touchend',    _blockScroll, { passive: false });
+document.addEventListener('touchcancel', _blockScroll, { passive: false });
+
 createRoot(document.getElementById("root")!).render(<App />);

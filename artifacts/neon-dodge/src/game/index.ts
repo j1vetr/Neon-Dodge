@@ -27,6 +27,11 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     },
     input: {
       activePointers: 3,
+      touch: {
+        /* passive:false → Phaser'ın kendi touch handler'ları da
+           preventDefault çağırabilsin (iOS kaydırma engellemesi) */
+        capture: true,
+      },
     },
     antialias: true,
     roundPixels: true,

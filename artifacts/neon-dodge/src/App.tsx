@@ -35,8 +35,14 @@ export default function App() {
     <div
       ref={containerRef}
       style={{
-        width: '100vw',
-        height: '100dvh',
+        /* 100% — html/body zaten position:fixed ile tam ekran,
+           dvh/svh kullanmıyoruz: viewport resize olunca Phaser
+           ScaleManager tetiklenip canvas kayıyor */
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
         overflow: 'hidden',
         background: '#050510',
         display: 'flex',
@@ -44,6 +50,7 @@ export default function App() {
         justifyContent: 'center',
         touchAction: 'none',
         userSelect: 'none',
+        overscrollBehavior: 'none',
       }}
     />
   );
