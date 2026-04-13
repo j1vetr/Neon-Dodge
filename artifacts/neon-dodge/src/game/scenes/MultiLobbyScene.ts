@@ -7,6 +7,7 @@ import {
   getSocket, disconnectSocket, roomState, colorHex, SKIN_KEYS,
 } from '../multiState';
 import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG, STORAGE_SKIN } from '../constants';
+import { t } from '../i18n';
 
 const W  = GAME_WIDTH;    // 800
 const H  = GAME_HEIGHT;   // 1400
@@ -238,13 +239,9 @@ export class MultiLobbyScene extends Phaser.Scene {
     const c = this.entryContainer = this.add.container(0, 0);
 
     /* ── BAŞLIK ── */
-    c.add(this.add.text(CX, 88, '⬡  ÇOK OYUNCULU', {
+    c.add(this.add.text(CX, 96, `⬡  ${t().multiTitle}`, {
       fontSize: '44px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
       color: '#ff8800',
-    }).setOrigin(0.5));
-    c.add(this.add.text(CX, 126, 'MULTIPLAYER', {
-      fontSize: '13px', fontFamily: '"Orbitron",monospace',
-      color: '#3a2000', letterSpacing: 8,
     }).setOrigin(0.5));
 
     /* ── HATA MESAJI ── */
@@ -257,7 +254,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(this._hRule(218, 0xff8800, 0.18));
 
     /* ── OYUNCU ADI ── */
-    c.add(this._label(58, 246, 'OYUNCU ADI  ·  PLAYER NAME'));
+    c.add(this._label(58, 246, t().playerName));
     this.nameCounter = this.add.text(W - 58, 246, '0/8', {
       fontSize: '14px', fontFamily: '"Orbitron",monospace', color: '#443322',
     }).setOrigin(1, 0.5);
@@ -270,7 +267,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(this.nameBorder);
 
     /* Placeholder */
-    this.nameHint = this.add.text(CX, 308, 'ADINI GİR  ·  ENTER NAME', {
+    this.nameHint = this.add.text(CX, 308, t().enterName, {
       fontSize: '26px', fontFamily: '"Orbitron",monospace',
       color: '#553311', letterSpacing: 6,
     }).setOrigin(0.5);
@@ -323,13 +320,13 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(this._hRule(348, 0xff8800, 0.18));
 
     /* ── ROKET SEÇ ── */
-    c.add(this._label(58, 372, 'ROKETİNİ SEÇ  ·  SELECT SHIP'));
+    c.add(this._label(58, 372, t().selectShip));
     this._buildSkinSelector(c, 456);
 
     c.add(this._hRule(520, 0x00ffff, 0.14));
 
     /* ── ODA OLUŞTUR ── */
-    this.createBtn = this._bigBtn(CX, 618, '◈  ODA OLUŞTUR  ·  CREATE ROOM', 0x00ffff, () => this._doCreate());
+    this.createBtn = this._bigBtn(CX, 618, t().createRoom, 0x00ffff, () => this._doCreate());
     this.createBtnLbl = this.createBtn.getByName('lbl') as Phaser.GameObjects.Text;
     c.add(this.createBtn);
 
@@ -337,7 +334,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.joinArrow = this.add.text(0, 0, '▼', {
       fontSize: '18px', fontFamily: '"Orbitron",monospace', color: '#ff8800',
     }).setOrigin(0.5).setName('arrow');
-    this.joinBtn = this._bigBtn(CX, 730, '⬡  ODAYA KATIL  ·  JOIN ROOM', 0xff8800, () => this._toggleJoin());
+    this.joinBtn = this._bigBtn(CX, 730, t().joinRoom, 0xff8800, () => this._toggleJoin());
     this.joinArrow.setPosition(W / 2 + 230, 730);
     c.add(this.joinBtn);
     c.add(this.joinArrow);
@@ -356,7 +353,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     jBg.lineBetween(80, 792, W - 80, 792);
     this.joinSection.add(jBg);
 
-    this.joinSection.add(this.add.text(CX, 820, 'ODA KODU  ·  ROOM CODE', {
+    this.joinSection.add(this.add.text(CX, 820, t().roomCode, {
       fontSize: '15px', fontFamily: '"Orbitron",monospace',
       color: '#553300', letterSpacing: 5,
     }).setOrigin(0.5));
@@ -424,7 +421,7 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     /* KATIL button inside join section */
     this.joinSection.add(
-      this._smallBtn(CX, 968, '  KATIL  ·  JOIN  ', 0xff8800, () => this._doJoin()),
+      this._smallBtn(CX, 968, t().joinBtn, 0xff8800, () => this._doJoin()),
     );
 
     /* ── BACK ── */
@@ -441,13 +438,13 @@ export class MultiLobbyScene extends Phaser.Scene {
     const c = this.waitingContainer = this.add.container(0, 0);
 
     /* ── BAŞLIK ── */
-    c.add(this.add.text(CX, 58, '⬡  BEKLEME ODASI', {
+    c.add(this.add.text(CX, 58, t().waitingRoom, {
       fontSize: '44px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
       color: '#00ffff',
     }).setOrigin(0.5));
-    c.add(this.add.text(CX, 96, 'ARKADAŞLARINI DAVET ET  ·  INVITE YOUR FRIENDS', {
-      fontSize: '13px', fontFamily: '"Orbitron",monospace',
-      color: '#0e2c38', letterSpacing: 4,
+    c.add(this.add.text(CX, 96, t().inviteFriends, {
+      fontSize: '14px', fontFamily: '"Orbitron",monospace',
+      color: '#0e2c38', letterSpacing: 5,
     }).setOrigin(0.5));
 
     /* ── ODA KODU KARTI ── */
@@ -460,9 +457,9 @@ export class MultiLobbyScene extends Phaser.Scene {
     cCard.lineBetween(72, 111.5, 728, 111.5);
     c.add(cCard);
 
-    c.add(this.add.text(CX, 134, 'ODA KODU  ·  ROOM CODE', {
+    c.add(this.add.text(CX, 134, t().roomCode, {
       fontSize: '13px', fontFamily: '"Orbitron",monospace',
-      color: '#0e3040', letterSpacing: 5,
+      color: '#0e3040', letterSpacing: 7,
     }).setOrigin(0.5));
 
     /* 5 harf kutusu */
@@ -491,18 +488,18 @@ export class MultiLobbyScene extends Phaser.Scene {
     }
 
     /* Kopyala butonu */
-    const copyBtn = this._smallBtn(CX, 304, '  ⎘  KOPYALA  ·  COPY  ', 0x00aacc, () => {
+    const copyBtn = this._smallBtn(CX, 304, t().copyCode, 0x00aacc, () => {
       navigator.clipboard?.writeText(roomState.code).catch(() => {});
       const l = copyBtn.getByName('lbl') as Phaser.GameObjects.Text | null;
-      l?.setText('  ✓  KOPYALANDI  ·  COPIED  ');
-      this.time.delayedCall(2200, () => l?.setText('  ⎘  KOPYALA  ·  COPY  '));
+      l?.setText(t().copied);
+      this.time.delayedCall(2200, () => l?.setText(t().copyCode));
     });
     c.add(copyBtn);
 
     /* ── OYUNCU LISTESI ── */
     c.add(this._hRule(338, 0x00ffff, 0.11));
 
-    c.add(this._label(56, 364, 'OYUNCULAR  ·  PLAYERS'));
+    c.add(this._label(56, 364, t().players));
     this.wPlayerCount = this.add.text(W - 56, 364, '0 / 4', {
       fontSize: '15px', fontFamily: '"Orbitron",monospace',
       color: '#00ffff', letterSpacing: 3,
@@ -533,7 +530,7 @@ export class MultiLobbyScene extends Phaser.Scene {
       }).setOrigin(0.5));
 
       /* Boş slot yazısı */
-      const emptyTxt = this.add.text(CX, cy, `· · · OYUNCU ${i + 1} BEKLENİYOR  ·  PLAYER ${i + 1} WAITING · · ·`, {
+      const emptyTxt = this.add.text(CX, cy, t().playerWaiting.replace('{n}', String(i + 1)), {
         fontSize: '18px', fontFamily: '"Orbitron",monospace',
         color: '#081822', letterSpacing: 2,
       }).setOrigin(0.5);
@@ -562,7 +559,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(this._hRule(botY + 10, 0x00ffff, 0.11));
 
     /* Başlat butonu */
-    this.startBtn = this._bigBtn(CX, botY + 90, '▶  OYUNU BAŞLAT  ·  START GAME', 0x00ff88, () => {
+    this.startBtn = this._bigBtn(CX, botY + 90, t().startGame, 0x00ff88, () => {
       getSocket().emit('start-game');
     });
     c.add(this.startBtn);
@@ -590,12 +587,8 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _buildResultsPanel() {
     const c = this.resultsContainer = this.add.container(0, 0);
 
-    this._neonTitle(c, CX, 96, '🏆  SONUÇLAR', '#ffcc00', 0xffcc00, '48px');
-    c.add(this.add.text(CX, 130, 'RESULTS', {
-      fontSize: '13px', fontFamily: '"Orbitron",monospace',
-      color: '#3a2800', letterSpacing: 8,
-    }).setOrigin(0.5));
-    c.add(this._hRule(152, 0xffaa00, 0.25));
+    this._neonTitle(c, CX, 96, t().resultsTitle, '#ffcc00', 0xffcc00, '48px');
+    c.add(this._hRule(148, 0xffaa00, 0.25));
 
     const ROW_H = 82, GAP = 8, Y0 = 170;
     for (let i = 0; i < 8; i++) {
@@ -635,7 +628,7 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     c.add(this._hRule(Y0 + 8 * (ROW_H + GAP) + 4, 0xffaa00, 0.15));
 
-    c.add(this._bigBtn(CX, 1128, '↩  LOBİYE DÖN  ·  BACK TO LOBBY', 0x00ffff, () => {
+    c.add(this._bigBtn(CX, 1128, t().backToLobby, 0x00ffff, () => {
       getSocket().emit('return-to-lobby');
       this._showPhase('waiting');
     }));
@@ -715,8 +708,8 @@ export class MultiLobbyScene extends Phaser.Scene {
           .setVisible(true);
         /* Alt bilgi */
         const subParts: string[] = [];
-        if (p.isHost) subParts.push('👑 HOST');
-        if (isMe)     subParts.push('◀ SEN  ·  YOU');
+        if (p.isHost) subParts.push(t().host);
+        if (isMe)     subParts.push(t().you);
         this.wSlotSub[i]
           .setText(subParts.join('   '))
           .setStyle({ color: isMe ? '#00ffcc' : '#ffcc00' })
@@ -767,7 +760,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     const name = this._getValidName();
     if (!name) return;
     localStorage.setItem(STORAGE_NAME, name);
-    this.createBtnLbl?.setText('OLUŞTURULUYOR...  ·  CREATING...');
+    this.createBtnLbl?.setText(t().creating);
     getSocket().emit('create-room', { name, skin: SKIN_KEYS[this.selectedSkin] });
   }
 
@@ -776,7 +769,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     if (!name) return;
     const code = this.joinCodeInput.value.toUpperCase().trim();
     if (code.length < 5) {
-      this._showError('5 KARAKTER GEREKLİ  ·  5 CHARS NEEDED');
+      this._showError(t().chars5needed);
       this._shakeCodeBoxes();
       return;
     }
@@ -787,7 +780,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _getValidName(): string | null {
     const name = this.nameValue.trim();
     if (name.length < 2) {
-      this._showError('EN AZ 2 KARAKTER  ·  MIN 2 CHARS');
+      this._showError(t().min2chars);
       this._shakeNameInput();
       return null;
     }
@@ -795,7 +788,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _resetCreateBtn() {
-    this.createBtnLbl?.setText('◈  ODA OLUŞTUR  ·  CREATE ROOM');
+    this.createBtnLbl?.setText(t().createRoom);
   }
 
   private _toggleJoin() {
@@ -1078,14 +1071,14 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _backBtn(x: number, y: number, cb: () => void) {
-    const t = this.add.text(x, y, '←  ANA MENÜ  ·  MAIN MENU', {
+    const text = this.add.text(x, y, t().mainMenuShort, {
       fontSize: '20px', fontFamily: '"Orbitron",monospace',
       color: '#2a3a44', letterSpacing: 2,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    t.on('pointerover', () => t.setStyle({ color: '#55778a' }));
-    t.on('pointerout',  () => t.setStyle({ color: '#2a3a44' }));
-    t.on('pointerdown', cb);
-    return t;
+    text.on('pointerover', () => text.setStyle({ color: '#55778a' }));
+    text.on('pointerout',  () => text.setStyle({ color: '#2a3a44' }));
+    text.on('pointerdown', cb);
+    return text;
   }
 
   private _neonTitle(

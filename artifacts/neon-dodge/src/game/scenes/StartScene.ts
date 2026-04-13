@@ -599,7 +599,7 @@ export class StartScene extends Phaser.Scene {
     /* ── SOLO kartı ── */
     _card(
       lcx, 0x00ffff, '#00ffff',
-      '◈', t().play.replace('▶   ', ''), 'TEK KİŞİLİK',
+      '◈', t().play.replace('▶   ', ''), t().singleplayer,
       0,
       () => this.scene.start('GameScene', { skin: this.selectedSkin }),
     );
@@ -607,7 +607,7 @@ export class StartScene extends Phaser.Scene {
     /* ── ÇOK OYUNCULU kartı ── */
     _card(
       rcx, 0xff7700, '#ff8800',
-      '⬡', 'ÇOK OYUNCULU', '2 – 8 OYUNCU',
+      '⬡', t().multiTitle, t().multiSub,
       680,
       () => this.scene.start('MultiLobbyScene'),
     );
