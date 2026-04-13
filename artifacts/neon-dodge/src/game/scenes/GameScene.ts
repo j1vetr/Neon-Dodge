@@ -351,6 +351,8 @@ export class GameScene extends Phaser.Scene {
 
     /* Multiplayer başlatma */
     if (this.multiMode) {
+      /* Her oyun başında Map'i sıfırla — eski Phaser nesnesi referansı kalmasın */
+      this.multiDots = new Map();
       this._buildMultiOverlay();
       this._bindMultiSocket();
     }
@@ -1327,6 +1329,11 @@ export class GameScene extends Phaser.Scene {
     s.on('player-pos', ({ id, x, y, score: _s }: any) => {
       if (id === roomState.myId) return;
       let entry = this.multiDots.get(id);
+      /* Eski oyundan kalmış destroy edilmiş nesne varsa temizle */
+      if (entry && !entry.dot.active) {
+        this.multiDots.delete(id);
+        entry = undefined;
+      }
       if (!entry) {
         const player = roomState.players.get(id);
         const color = player?.color ?? 0xffffff;

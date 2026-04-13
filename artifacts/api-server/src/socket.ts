@@ -56,6 +56,7 @@ export function registerSocketHandlers(io: Server) {
         skin: player.skin,
         color: player.color,
         isHost: false,
+        alive: true,
       });
     });
 
