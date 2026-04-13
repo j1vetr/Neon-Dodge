@@ -52,6 +52,9 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    __BUILD_TS__: JSON.stringify(Date.now()),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
