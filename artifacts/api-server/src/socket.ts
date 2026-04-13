@@ -68,7 +68,6 @@ export function registerSocketHandlers(io: Server) {
       if (!player?.isHost) return;
       if (room.players.size < 1) return;
       room.state = 'playing';
-      /* Herkesi canlı yap */
       for (const p of room.players.values()) {
         p.alive = true;
         p.score = 0;
@@ -77,7 +76,9 @@ export function registerSocketHandlers(io: Server) {
         p.finalScore = 0;
         p.rank = 0;
       }
-      io.to(room.code).emit('game-starting');
+      io.to(room.code).emit('game-starting', {
+        players: playersSnapshot(room),
+      });
     });
 
     /* ── Pozisyon güncelle ── */

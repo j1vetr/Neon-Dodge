@@ -213,7 +213,11 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._renderPlayerList();
     });
 
-    s.on('game-starting', () => {
+    s.on('game-starting', ({ players }: any) => {
+      if (players) {
+        roomState.players.clear();
+        for (const p of players) roomState.players.set(p.id, p);
+      }
       this.scene.start('GameScene', {
         skin:    this.selectedSkin,
         multi:   true,

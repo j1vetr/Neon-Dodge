@@ -351,7 +351,7 @@ export class GameScene extends Phaser.Scene {
 
     /* Multiplayer başlatma */
     if (this.multiMode) {
-      /* Her oyun başında Map'i sıfırla — eski Phaser nesnesi referansı kalmasın */
+      for (const p of roomState.players.values()) p.alive = true;
       this.multiDots = new Map();
       this._buildMultiOverlay();
       this._bindMultiSocket();
