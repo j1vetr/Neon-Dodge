@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { VitePWA } from "vite-plugin-pwa";
 
 const rawPort = process.env.PORT;
 const port = rawPort ? Number(rawPort) : 3000;
@@ -15,38 +14,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      injectRegister: 'script',
-      manifest: false,
-      workbox: {
-        globPatterns: ['**/*.{js,css,png,jpg,jpeg,svg,ico,woff,woff2,mp3,ogg,wav}'],
-        navigateFallback: undefined,
-        runtimeCaching: [
-          {
-            urlPattern: /\/(?:index\.html)?$/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-pages',
-              networkTimeoutSeconds: 3,
-            },
-          },
-          {
-            urlPattern: /version\.json/,
-            handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts',
-              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
-      },
-      devOptions: { enabled: false },
-    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

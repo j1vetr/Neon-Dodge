@@ -3,6 +3,17 @@ import App from "./App";
 import "./index.css";
 import { startUpdateCheck } from "./updateCheck";
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      names.forEach(n => caches.delete(n));
+    });
+  }
+}
+
 startUpdateCheck();
 
 /* Suppress "Cannot suspend/resume a closed AudioContext" unhandled rejections.
