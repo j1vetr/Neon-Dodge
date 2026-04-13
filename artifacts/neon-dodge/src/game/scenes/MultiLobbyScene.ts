@@ -28,7 +28,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   private waitingContainer!: Phaser.GameObjects.Container;
   private resultsContainer!: Phaser.GameObjects.Container;
 
-  /* Entry — name (pure Phaser keyboard, no DOM) */
+  /* Entry — name */
   private nameValue   = '';
   private nameActive  = false;
   private cursorOn    = false;
@@ -37,16 +37,14 @@ export class MultiLobbyScene extends Phaser.Scene {
   private nameCounter!:Phaser.GameObjects.Text;
   private nameBorder!: Phaser.GameObjects.Graphics;
   private nameHitBox!: Phaser.GameObjects.Rectangle;
-  /* joinCodeDom kept — oda kodu DOM input'u çalışıyor */
+  private nameDomEl!:  Phaser.GameObjects.DOMElement;   /* mobil klavye için */
 
-  /* Entry — join code (5-box) */
+  /* Entry — join code modal */
   private joinCodeDom!:   Phaser.GameObjects.DOMElement;
   private joinCodeInput!: HTMLInputElement;
   private codeBoxes:      Phaser.GameObjects.Graphics[]    = [];
   private codeLetters:    Phaser.GameObjects.Text[]        = [];
-  private joinSection!:   Phaser.GameObjects.Container;
-  private joinOpen = false;
-  private joinArrow!: Phaser.GameObjects.Text;
+  private joinModal!:     Phaser.GameObjects.Container;  /* ekran ortası modal */
 
   /* Entry — status */
   private statusDot?:  Phaser.GameObjects.Arc;
@@ -113,7 +111,6 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.skinBorders     = [];
     this.codeBoxes       = [];
     this.codeLetters     = [];
-    this.joinOpen        = false;
   }
 
   create() {
@@ -125,6 +122,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.selectedSkin = parseInt(localStorage.getItem(STORAGE_SKIN) || '0', 10);
 
     this._buildEntryPanel();
+    this._buildJoinModal();
     this._buildWaitingPanel();
     this._buildResultsPanel();
     this._bindSocket();
@@ -159,6 +157,8 @@ export class MultiLobbyScene extends Phaser.Scene {
     s.off('player-joined'); s.off('player-left');
     s.off('game-starting'); s.off('game-over');    s.off('lobby-reset');
     this.joinCodeDom?.destroy();
+    this.nameDomEl?.destroy();
+    this.joinCodeInput?.blur();
     this.nameActive = false;
   }
 
@@ -285,19 +285,48 @@ export class MultiLobbyScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     c.add(this.nameHitBox);
 
-    this.nameHitBox.on('pointerdown', () => {
+    /* ── AD DOM INPUT — mobilde klavye açmak için ── */
+    this.nameDomEl = this.add.dom(CX, 308, 'input', `
+      width:${W - 156}px; height:72px;
+      background:transparent; border:none; outline:none;
+      color:transparent; caret-color:transparent;
+      font-size:1px; pointer-events:none; opacity:0; cursor:text;
+    `).setDepth(30);
+    const ni = this.nameDomEl.node as HTMLInputElement;
+    ni.maxLength = 8;
+    ni.autocomplete = 'off';
+    (ni as any).spellcheck = false;
+    ni.addEventListener('input', () => {
+      const v = ni.value.toUpperCase().replace(/[^A-Z0-9ÇĞİÖŞÜ ]/g, '').slice(0, 8);
+      ni.value = v;
+      this.nameValue = v;
+      this._renderNameTxt();
+      this._updateCounter();
+      this._drawNameBorder(0xff8800, 0.45);
+      this.errorTxt?.setAlpha(0);
+    });
+    ni.addEventListener('focus', () => {
       this.nameActive = true;
       this._drawNameBorder(0xff8800, 0.9);
       this._renderNameTxt();
     });
+    ni.addEventListener('blur', () => {
+      this.nameActive = false;
+      this.cursorOn = false;
+      this._drawNameBorder(0xff8800, 0.5);
+      this._renderNameTxt();
+    });
+    ni.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') { ni.blur(); this._doCreate(); }
+      if (e.key === 'Escape') ni.blur();
+    });
+    /* Tıklayınca klavye aç */
+    this.nameHitBox.on('pointerdown', () => ni.focus());
 
     /* Başka yere tıklayınca deaktif */
     this.input.on('pointerdown', (_p: unknown, objs: Phaser.GameObjects.GameObject[]) => {
       if (!objs.includes(this.nameHitBox)) {
-        this.nameActive = false;
-        this.cursorOn   = false;
-        this._drawNameBorder(0xff8800, 0.5);
-        this._renderNameTxt();
+        ni.blur();
       }
     });
 
@@ -330,35 +359,55 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.createBtnLbl = this.createBtn.getByName('lbl') as Phaser.GameObjects.Text;
     c.add(this.createBtn);
 
-    /* ── ODAYA KATIL (toggle) ── */
-    this.joinArrow = this.add.text(0, 0, '▼', {
-      fontSize: '18px', fontFamily: '"Orbitron",monospace', color: '#ff8800',
-    }).setOrigin(0.5).setName('arrow');
-    this.joinBtn = this._bigBtn(CX, 730, t().joinRoom, 0xff8800, () => this._toggleJoin());
-    this.joinArrow.setPosition(W / 2 + 230, 730);
+    /* ── ODAYA KATIL — modal açar ── */
+    this.joinBtn = this._bigBtn(CX, 730, t().joinRoom, 0xff8800, () => this._openJoinModal());
     c.add(this.joinBtn);
-    c.add(this.joinArrow);
 
-    /* ── JOIN SECTION (toggle) ── */
-    this.joinSection = this.add.container(0, 0);
-    this.joinSection.setAlpha(0);
-    c.add(this.joinSection);
+    /* ── BACK ── */
+    c.add(this._backBtn(CX, H - 80, () => {
+      disconnectSocket();
+      this.scene.start('StartScene');
+    }));
+  }
 
-    const jBg = this.add.graphics();
-    jBg.fillStyle(0x06040e, 0.96);
-    jBg.fillRoundedRect(60, 790, W - 120, 252, 18);
-    jBg.lineStyle(2, 0xff8800, 0.45);
-    jBg.strokeRoundedRect(60, 790, W - 120, 252, 18);
-    jBg.lineStyle(3, 0xff8800, 0.9);
-    jBg.lineBetween(80, 792, W - 80, 792);
-    this.joinSection.add(jBg);
+  /* ==============================================================
+     JOIN ROOM MODAL — ekranın ortasında, klavyenin üzerinde
+  ============================================================== */
+  private _buildJoinModal() {
+    const c = this.joinModal = this.add.container(0, 0);
+    c.setDepth(60).setVisible(false);
 
-    this.joinSection.add(this.add.text(CX, 820, t().roomCode, {
-      fontSize: '15px', fontFamily: '"Orbitron",monospace',
-      color: '#553300', letterSpacing: 5,
+    /* Karanlık backdrop — tıklayınca kapanır */
+    const backdrop = this.add.rectangle(CX, H / 2, W, H, 0x000000, 0.78)
+      .setInteractive();
+    backdrop.on('pointerdown', () => this._closeJoinModal());
+    c.add(backdrop);
+
+    /* ── Kart ── */
+    const BOX_Y   = 455;  /* oda kodu kutularının merkezi */
+    const CARD_CY = 490;  /* kartın dikey merkezi */
+    const CARD_H  = 360;
+    const CARD_W  = W - 80;
+
+    const card = this.add.graphics();
+    card.fillStyle(0x05030d, 0.97);
+    card.fillRoundedRect(CX - CARD_W / 2, CARD_CY - CARD_H / 2, CARD_W, CARD_H, 22);
+    card.lineStyle(2, 0xff8800, 0.75);
+    card.strokeRoundedRect(CX - CARD_W / 2, CARD_CY - CARD_H / 2, CARD_W, CARD_H, 22);
+    card.lineStyle(3, 0xff8800, 1);
+    card.lineBetween(
+      CX - CARD_W / 2 + 22, CARD_CY - CARD_H / 2 + 1.5,
+      CX + CARD_W / 2 - 22, CARD_CY - CARD_H / 2 + 1.5,
+    );
+    c.add(card);
+
+    /* Başlık */
+    c.add(this.add.text(CX, CARD_CY - CARD_H / 2 + 42, t().roomCode, {
+      fontSize: '16px', fontFamily: '"Orbitron",monospace',
+      color: '#553300', letterSpacing: 6,
     }).setOrigin(0.5));
 
-    /* 5 kutu */
+    /* ── 5 oda kodu kutusu ── */
     const boxW = 66, boxH = 72, boxGap = 12;
     const boxTotalW = 5 * boxW + 4 * boxGap;
     const boxX0 = CX - boxTotalW / 2;
@@ -366,69 +415,75 @@ export class MultiLobbyScene extends Phaser.Scene {
       const bx = boxX0 + i * (boxW + boxGap) + boxW / 2;
       const bg = this.add.graphics();
       bg.fillStyle(0x100820, 0.9);
-      bg.fillRoundedRect(bx - boxW / 2, 850, boxW, boxH, 10);
+      bg.fillRoundedRect(bx - boxW / 2, BOX_Y - boxH / 2, boxW, boxH, 10);
       bg.lineStyle(2, 0xff6600, 0.3);
-      bg.strokeRoundedRect(bx - boxW / 2, 850, boxW, boxH, 10);
-      this.joinSection.add(bg);
+      bg.strokeRoundedRect(bx - boxW / 2, BOX_Y - boxH / 2, boxW, boxH, 10);
       this.codeBoxes.push(bg);
+      c.add(bg);
 
-      const lt = this.add.text(bx, 884, '', {
+      const lt = this.add.text(bx, BOX_Y, '', {
         fontSize: '34px', fontFamily: '"Orbitron",monospace',
         fontStyle: 'bold', color: '#ff8800',
       }).setOrigin(0.5);
-      this.joinSection.add(lt);
       this.codeLetters.push(lt);
+      c.add(lt);
     }
 
-    /* Invisible wide input over the boxes — CONTAINER'A EKLEME */
-    this.joinCodeDom = this.add.dom(CX, 884, 'input', `
+    /* Kutuların üstüne şeffaf tıklanabilir alan */
+    const codeHit = this.add.rectangle(CX, BOX_Y, boxTotalW + 40, boxH + 20, 0, 0)
+      .setInteractive({ useHandCursor: true });
+    codeHit.on('pointerdown', () => this.joinCodeInput?.focus());
+    c.add(codeHit);
+
+    /* ── DOM input (görünmez, klavye için) ── */
+    this.joinCodeDom = this.add.dom(CX, BOX_Y, 'input', `
       width:${boxTotalW + 20}px; height:${boxH + 10}px;
       background:transparent; border:none; outline:none;
       color:transparent; caret-color:transparent;
-      font-size:1px; letter-spacing:0;
-      pointer-events:auto;
-    `).setDepth(25).setVisible(false);
-    /* NOT: joinSection.add(this.joinCodeDom) yok — pointer events kırar */
+      font-size:1px; letter-spacing:0; pointer-events:none; opacity:0;
+    `).setDepth(65).setVisible(false);
 
     const ji = this.joinCodeInput = this.joinCodeDom.node as HTMLInputElement;
     ji.maxLength = 5;
     ji.autocomplete = 'off';
-
     ji.addEventListener('input',   () => this._onCodeInput());
-    ji.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doJoin(); });
-
-    /* Mobil: klavye açılınca input'u görünür alana kaydır */
-    const vv = (window as any).visualViewport as (EventTarget & { offsetTop: number; height: number }) | null;
-    let _vvHandler: (() => void) | null = null;
-    ji.addEventListener('focus', () => {
-      setTimeout(() => ji.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 100);
-      if (vv) {
-        _vvHandler = () => {
-          window.scrollTo({ top: vv.offsetTop, behavior: 'instant' as ScrollBehavior });
-        };
-        vv.addEventListener('resize', _vvHandler);
-        vv.addEventListener('scroll', _vvHandler);
-      }
-    });
-    ji.addEventListener('blur', () => {
-      if (vv && _vvHandler) {
-        vv.removeEventListener('resize', _vvHandler);
-        vv.removeEventListener('scroll', _vvHandler);
-        _vvHandler = null;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+    ji.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter')  this._doJoin();
+      if (e.key === 'Escape') this._closeJoinModal();
     });
 
-    /* KATIL button inside join section */
-    this.joinSection.add(
-      this._smallBtn(CX, 968, t().joinBtn, 0xff8800, () => this._doJoin()),
-    );
+    /* ── KATIL butonu ── */
+    const joinActionBtn = this._bigBtn(CX, 565, t().joinBtn, 0xff8800, () => this._doJoin());
+    c.add(joinActionBtn);
 
-    /* ── BACK ── */
-    c.add(this._backBtn(CX, H - 80, () => {
-      disconnectSocket();
-      this.scene.start('StartScene');
-    }));
+    /* ── İptal ── */
+    const cancelTxt = this.add.text(CX, 645, t().close, {
+      fontSize: '18px', fontFamily: '"Orbitron",monospace', color: '#2a3a44',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    cancelTxt.on('pointerover', () => cancelTxt.setStyle({ color: '#55778a' }));
+    cancelTxt.on('pointerout',  () => cancelTxt.setStyle({ color: '#2a3a44' }));
+    cancelTxt.on('pointerdown', () => this._closeJoinModal());
+    c.add(cancelTxt);
+  }
+
+  private _openJoinModal() {
+    if (!this.joinModal) return;
+    this.joinCodeInput.value = '';
+    this._updateCodeBoxes('');
+    this.joinCodeDom.setVisible(true);
+    this.joinModal.setVisible(true).setAlpha(0);
+    this.tweens.add({ targets: this.joinModal, alpha: 1, duration: 200, ease: 'Sine.easeOut' });
+    this.time.delayedCall(250, () => this.joinCodeInput?.focus());
+  }
+
+  private _closeJoinModal() {
+    if (!this.joinModal) return;
+    this.joinCodeInput?.blur();
+    this.joinCodeDom?.setVisible(false);
+    this.tweens.add({
+      targets: this.joinModal, alpha: 0, duration: 160, ease: 'Sine.easeIn',
+      onComplete: () => this.joinModal?.setVisible(false),
+    });
   }
 
   /* ==============================================================
@@ -746,11 +801,17 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.waitingContainer?.setVisible(ph === 'waiting');
     this.resultsContainer?.setVisible(ph === 'results');
 
-    /* joinCodeDom hâlâ DOM — entry+join açıkken görünür */
-    if (this.joinCodeDom) this.joinCodeDom.setVisible(ph === 'entry' && this.joinOpen);
-
-    /* Ad kutusu deaktif olsun */
-    if (ph !== 'entry') { this.nameActive = false; this.cursorOn = false; }
+    /* Phase değişince modal kapat, DOM'ları gizle */
+    if (ph !== 'entry') {
+      this.joinModal?.setVisible(false);
+      this.joinCodeDom?.setVisible(false);
+      this.joinCodeInput?.blur();
+      this.nameDomEl?.setVisible(false);
+      this.nameActive = false;
+      this.cursorOn = false;
+    } else {
+      this.nameDomEl?.setVisible(true);
+    }
   }
 
   /* ==============================================================
@@ -791,21 +852,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.createBtnLbl?.setText(t().createRoom);
   }
 
-  private _toggleJoin() {
-    this.joinOpen = !this.joinOpen;
-    this.tweens.add({
-      targets: this.joinSection,
-      alpha: this.joinOpen ? 1 : 0,
-      duration: 180, ease: 'Sine.easeOut',
-    });
-    this.joinArrow.setText(this.joinOpen ? '▲' : '▼');
-    if (this.joinCodeDom) {
-      this.joinCodeDom.setVisible(this.joinOpen);
-    }
-    if (this.joinOpen) {
-      this.time.delayedCall(200, () => this.joinCodeInput?.focus());
-    }
-  }
+  /* _toggleJoin kaldırıldı — joinBtn artık _openJoinModal'ı çağırıyor */
 
   /* ==============================================================
      INPUT HANDLERS
@@ -828,7 +875,11 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.nameCounter?.setStyle({ color: len >= 7 ? '#ff8800' : '#443322' });
   }
 
+  /* BOX_Y = 455 (modal'daki kutucukların merkezi) */
+  private readonly JOIN_BOX_Y = 455;
+
   private _updateCodeBoxes(val: string) {
+    const BY = this.JOIN_BOX_Y;
     for (let i = 0; i < 5; i++) {
       const ch = val[i] ?? '';
       this.codeLetters[i]?.setText(ch);
@@ -837,14 +888,14 @@ export class MultiLobbyScene extends Phaser.Scene {
       const filled = ch !== '';
       this.codeBoxes[i]?.fillStyle(filled ? 0x1a0d00 : 0x100820, 0.9);
       this.codeBoxes[i]?.fillRoundedRect(
-        this._codeBoxX(i) - 33, 850, 66, 72, 10,
+        this._codeBoxX(i) - 33, BY - 36, 66, 72, 10,
       );
       this.codeBoxes[i]?.lineStyle(2,
         filled ? 0xff8800 : 0xff6600,
         filled ? 0.9 : 0.3,
       );
       this.codeBoxes[i]?.strokeRoundedRect(
-        this._codeBoxX(i) - 33, 850, 66, 72, 10,
+        this._codeBoxX(i) - 33, BY - 36, 66, 72, 10,
       );
     }
   }
@@ -888,10 +939,11 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _shakeCodeBoxes() {
+    if (!this.joinModal) return;
     this.tweens.add({
-      targets: this.joinSection, x: 10,
+      targets: this.joinModal, x: 10,
       duration: 40, yoyo: true, repeat: 3, ease: 'Linear',
-      onComplete: () => { this.joinSection.x = 0; },
+      onComplete: () => { this.joinModal.x = 0; },
     });
   }
 
