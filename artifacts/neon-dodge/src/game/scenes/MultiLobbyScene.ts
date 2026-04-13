@@ -63,12 +63,18 @@ export class MultiLobbyScene extends Phaser.Scene {
   private skinFrames:   Phaser.GameObjects.Image[]     = [];
   private skinBorders:  Phaser.GameObjects.Rectangle[] = [];
 
-  /* Waiting */
-  private waitCodeTxt!:    Phaser.GameObjects.Text;
-  private playerListTxts:  Phaser.GameObjects.Text[] = [];
-  private playerRowBgs:    RBg[]                     = [];
-  private startBtn!:       Phaser.GameObjects.Container;
-  private startBtnLabel!:  Phaser.GameObjects.Text;
+  /* Waiting — code display */
+  private waitCodeBoxGs:  Phaser.GameObjects.Graphics[] = [];
+  private waitCodeLetters: Phaser.GameObjects.Text[]    = [];
+  /* Waiting — player slots (max 4) */
+  private wSlotBg:      Phaser.GameObjects.Graphics[] = [];
+  private wSlotOrb:     Phaser.GameObjects.Arc[]      = [];
+  private wSlotName:    Phaser.GameObjects.Text[]     = [];
+  private wSlotSub:     Phaser.GameObjects.Text[]     = [];
+  private wSlotEmpty:   Phaser.GameObjects.Text[]     = [];
+  private wPlayerCount!: Phaser.GameObjects.Text;
+  private startBtn!:     Phaser.GameObjects.Container;
+  private startBtnLabel!:Phaser.GameObjects.Text;
 
   /* Results */
   private resultsNameTxts:  Phaser.GameObjects.Text[] = [];
@@ -92,8 +98,13 @@ export class MultiLobbyScene extends Phaser.Scene {
     } else {
       this.phase = 'entry';
     }
-    this.playerListTxts  = [];
-    this.playerRowBgs    = [];
+    this.waitCodeBoxGs   = [];
+    this.waitCodeLetters = [];
+    this.wSlotBg         = [];
+    this.wSlotOrb        = [];
+    this.wSlotName       = [];
+    this.wSlotSub        = [];
+    this.wSlotEmpty      = [];
     this.resultsNameTxts = [];
     this.resultsScoreTxts= [];
     this.resultsRankTxts = [];
@@ -171,7 +182,7 @@ export class MultiLobbyScene extends Phaser.Scene {
       roomState.code = code; roomState.myId = myId; roomState.myColor = myColor;
       roomState.players.clear();
       for (const p of players) roomState.players.set(p.id, p);
-      this.waitCodeTxt.setText(code);
+      this._setWaitCode(code);
       this._showPhase('waiting');
       this._renderPlayerList();
     });
@@ -181,7 +192,7 @@ export class MultiLobbyScene extends Phaser.Scene {
       roomState.code = code; roomState.myId = myId; roomState.myColor = myColor;
       roomState.players.clear();
       for (const p of players) roomState.players.set(p.id, p);
-      this.waitCodeTxt.setText(code);
+      this._setWaitCode(code);
       this._showPhase('waiting');
       this._renderPlayerList();
     });
@@ -402,36 +413,61 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   /* ==============================================================
-     WAITING PANEL
+     WAITING PANEL  — yeniden tasarım, max-4 oyuncu
   ============================================================== */
   private _buildWaitingPanel() {
     const c = this.waitingContainer = this.add.container(0, 0);
 
-    this._neonTitle(c, CX, 100, 'BEKLEME ODASI', '#00ffff', 0x00ffff, '40px');
-
-    /* Kod kartı */
-    const card = this.add.graphics();
-    card.fillStyle(0x001520, 0.88);
-    card.fillRoundedRect(CX - 290, 140, 580, 180, 22);
-    card.lineStyle(2, 0x00ffff, 0.4);
-    card.strokeRoundedRect(CX - 290, 140, 580, 180, 22);
-    card.lineStyle(3, 0x00ffff, 1);
-    card.lineBetween(CX - 268, 142, CX + 268, 142);
-    c.add(card);
-
-    c.add(this.add.text(CX, 172, 'ODA KODU', {
+    /* ── BAŞLIK ── */
+    this._neonTitle(c, CX, 58, '⬡  BEKLEME ODASI', '#00ffff', 0x00ffff, '44px');
+    c.add(this.add.text(CX, 96, 'ARKADAŞLARINI DAVET ET', {
       fontSize: '14px', fontFamily: '"Orbitron",monospace',
-      color: '#1a3344', letterSpacing: 5,
+      color: '#0e2c38', letterSpacing: 5,
     }).setOrigin(0.5));
 
-    this.waitCodeTxt = this.add.text(CX, 252, '─ ─ ─ ─ ─', {
-      fontSize: '54px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
-      color: '#00ffff', letterSpacing: 8,
-      shadow: { color: '#00ffff', blur: 22, fill: true, offsetX: 0, offsetY: 0 },
-    }).setOrigin(0.5);
-    c.add(this.waitCodeTxt);
+    /* ── ODA KODU KARTI ── */
+    const cCard = this.add.graphics();
+    cCard.fillStyle(0x000d1a, 0.94);
+    cCard.fillRoundedRect(44, 110, 712, 154, 20);
+    cCard.lineStyle(1.5, 0x00ffff, 0.22);
+    cCard.strokeRoundedRect(44, 110, 712, 154, 20);
+    cCard.lineStyle(3, 0x00ffff, 0.9);
+    cCard.lineBetween(72, 111.5, 728, 111.5);
+    c.add(cCard);
 
-    const copyBtn = this._smallBtn(CX, 352, '  ⎘  KOPYALA  ', 0x2299bb, () => {
+    c.add(this.add.text(CX, 134, 'ODA KODU', {
+      fontSize: '13px', fontFamily: '"Orbitron",monospace',
+      color: '#0e3040', letterSpacing: 7,
+    }).setOrigin(0.5));
+
+    /* 5 harf kutusu */
+    const BW = 64, BH = 74, BGAP = 12;
+    const BTOTAL = 5 * BW + 4 * BGAP;
+    const BX0 = CX - BTOTAL / 2;
+    const BCY = 202;
+    for (let i = 0; i < 5; i++) {
+      const bx = BX0 + i * (BW + BGAP);
+      const bg = this.add.graphics();
+      bg.fillStyle(0x001828, 1);
+      bg.fillRoundedRect(bx, BCY - BH / 2, BW, BH, 10);
+      bg.lineStyle(2, 0x00ffff, 0.5);
+      bg.strokeRoundedRect(bx, BCY - BH / 2, BW, BH, 10);
+      bg.lineStyle(2, 0x00ffff, 0.95);
+      bg.lineBetween(bx + 8, BCY - BH / 2 + 1.5, bx + BW - 8, BCY - BH / 2 + 1.5);
+      this.waitCodeBoxGs.push(bg);
+      c.add(bg);
+
+      const lt = this.add.text(bx + BW / 2, BCY, '·', {
+        fontSize: '34px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+        color: '#00ffff',
+        shadow: { color: '#00ffff', blur: 18, fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5);
+      this.waitCodeLetters.push(lt);
+      c.add(lt);
+    }
+
+    /* Kopyala butonu */
+    const copyBtn = this._smallBtn(CX, 304, '  ⎘  KOPYALA  ', 0x00aacc, () => {
       navigator.clipboard?.writeText(roomState.code).catch(() => {});
       const l = copyBtn.getByName('lbl') as Phaser.GameObjects.Text | null;
       l?.setText('  ✓  KOPYALANDI  ');
@@ -439,37 +475,88 @@ export class MultiLobbyScene extends Phaser.Scene {
     });
     c.add(copyBtn);
 
-    c.add(this._hRule(392, 0x00ffff, 0.13));
-    c.add(this._label(58, 414, 'OYUNCULAR'));
+    /* ── OYUNCU LISTESI ── */
+    c.add(this._hRule(338, 0x00ffff, 0.11));
 
-    for (let i = 0; i < 8; i++) {
-      const ry  = 444 + i * 70;
-      const g   = this.add.graphics();
-      g.fillStyle(0, 0);
-      g.fillRoundedRect(52, ry - 26, W - 104, 52, 10);
-      this.playerRowBgs.push({ g, y: ry });
-      c.add(g);
+    c.add(this._label(56, 364, 'OYUNCULAR'));
+    this.wPlayerCount = this.add.text(W - 56, 364, '0 / 4', {
+      fontSize: '15px', fontFamily: '"Orbitron",monospace',
+      color: '#00ffff', letterSpacing: 3,
+    }).setOrigin(1, 0.5);
+    c.add(this.wPlayerCount);
 
-      const txt = this.add.text(98, ry, '', {
-        fontSize: '24px', fontFamily: '"Orbitron",monospace',
-        fontStyle: 'bold', color: '#1a2533',
-      }).setOrigin(0, 0.5);
-      this.playerListTxts.push(txt);
-      c.add(txt);
+    /* 4 oyuncu slotu */
+    const SH = 120, SGAP = 14, SY0 = 392;
+    for (let i = 0; i < 4; i++) {
+      const sy = SY0 + i * (SH + SGAP);
+      const cy = sy + SH / 2;
+
+      /* Arka plan (renderda yeniden çizilir) */
+      const bg = this.add.graphics();
+      this.wSlotBg.push(bg);
+      c.add(bg);
+
+      /* Renkli orb */
+      const orb = this.add.circle(92, cy, 22, 0x010a10, 1)
+        .setStrokeStyle(2, 0x0d2030, 1);
+      this.wSlotOrb.push(orb);
+      c.add(orb);
+
+      /* Slot numarası (orb içinde) — daima görünür */
+      c.add(this.add.text(92, cy, String(i + 1), {
+        fontSize: '18px', fontFamily: '"Orbitron",monospace',
+        color: '#0a1e28',
+      }).setOrigin(0.5));
+
+      /* Boş slot yazısı */
+      const emptyTxt = this.add.text(CX, cy, `· · · OYUNCU ${i + 1} BEKLENIYOR · · ·`, {
+        fontSize: '18px', fontFamily: '"Orbitron",monospace',
+        color: '#081822', letterSpacing: 2,
+      }).setOrigin(0.5);
+      this.wSlotEmpty.push(emptyTxt);
+      c.add(emptyTxt);
+
+      /* Oyuncu adı */
+      const nameTxt = this.add.text(134, cy - 16, '', {
+        fontSize: '28px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+        color: '#00ffff',
+      }).setOrigin(0, 0.5).setVisible(false);
+      this.wSlotName.push(nameTxt);
+      c.add(nameTxt);
+
+      /* Alt bilgi: HOST ◀ SEN */
+      const subTxt = this.add.text(134, cy + 18, '', {
+        fontSize: '13px', fontFamily: '"Orbitron",monospace',
+        color: '#1a8899', letterSpacing: 3,
+      }).setOrigin(0, 0.5).setVisible(false);
+      this.wSlotSub.push(subTxt);
+      c.add(subTxt);
     }
 
-    c.add(this._hRule(1012, 0x00ffff, 0.13));
+    /* ── ALT KESİM ── */
+    const botY = SY0 + 4 * (SH + SGAP) - SGAP;  // = 392 + 514 = 906
+    c.add(this._hRule(botY + 10, 0x00ffff, 0.11));
 
-    this.startBtn = this._bigBtn(CX, 1104, '▶  OYUNU BAŞLAT', 0x00ff88, () => {
+    /* Başlat butonu */
+    this.startBtn = this._bigBtn(CX, botY + 90, '▶  OYUNU BAŞLAT', 0x00ff88, () => {
       getSocket().emit('start-game');
     });
     c.add(this.startBtn);
     this.startBtnLabel = this.startBtn.getByName('lbl') as Phaser.GameObjects.Text;
 
-    c.add(this._backBtn(CX, H - 80, () => {
+    /* Geri butonu */
+    c.add(this._backBtn(CX, botY + 210, () => {
       disconnectSocket();
       this.scene.start('StartScene');
     }));
+  }
+
+  /* Oda kodunu 5 kutuya dağıt */
+  private _setWaitCode(code: string) {
+    for (let i = 0; i < 5; i++) {
+      const ch = code[i] ?? '·';
+      this.waitCodeLetters[i]?.setText(ch);
+    }
   }
 
   /* ==============================================================
@@ -556,37 +643,78 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _renderPlayerList() {
-    const players = [...roomState.players.values()];
-    const me      = roomState.players.get(roomState.myId);
-    const amHost  = me?.isHost ?? false;
+    const players = [...roomState.players.values()].slice(0, 4);
+    const amHost  = roomState.players.get(roomState.myId)?.isHost ?? false;
 
-    for (let i = 0; i < this.playerListTxts.length; i++) {
-      const p  = players[i];
-      const rb = this.playerRowBgs[i];
+    /* Sayaç */
+    this.wPlayerCount?.setText(`${players.length} / 4`);
 
-      rb.g.clear();
-      if (!p) {
-        this.playerListTxts[i].setText('');
-        continue;
+    const SH = 120, SGAP = 14, SY0 = 392;
+
+    for (let i = 0; i < 4; i++) {
+      const p   = players[i];
+      const sy  = SY0 + i * (SH + SGAP);
+      const cy  = sy + SH / 2;
+      const bg  = this.wSlotBg[i];
+      bg.clear();
+
+      if (p) {
+        /* ── Dolu slot ── */
+        const col = p.color as number;
+        const hex = colorHex(col);
+        const isMe = p.id === roomState.myId;
+
+        /* Arka plan */
+        bg.fillStyle(col, 0.07);
+        bg.fillRoundedRect(44, sy, W - 88, SH, 14);
+        /* Kenarlık */
+        bg.lineStyle(isMe ? 2.5 : 1.5, col, isMe ? 0.9 : 0.55);
+        bg.strokeRoundedRect(44, sy, W - 88, SH, 14);
+        /* Üst vurgu */
+        bg.lineStyle(isMe ? 3.5 : 2, col, 1);
+        bg.lineBetween(66, sy + 1.5, W - 66, sy + 1.5);
+        /* Orb */
+        this.wSlotOrb[i]
+          .setFillStyle(col, 0.85)
+          .setStrokeStyle(2, col, 1);
+        this.wSlotOrb[i].setY(cy);
+        /* İsim */
+        this.wSlotName[i]
+          .setText(p.name)
+          .setStyle({ color: hex })
+          .setY(cy - (p.isHost || isMe ? 14 : 0))
+          .setVisible(true);
+        /* Alt bilgi */
+        const subParts: string[] = [];
+        if (p.isHost) subParts.push('👑 HOST');
+        if (isMe)     subParts.push('◀ SEN');
+        this.wSlotSub[i]
+          .setText(subParts.join('   '))
+          .setStyle({ color: isMe ? '#00ffcc' : '#ffcc00' })
+          .setY(cy + 18)
+          .setVisible(subParts.length > 0);
+        /* Boş yazıyı gizle */
+        this.wSlotEmpty[i].setVisible(false);
+
+      } else {
+        /* ── Boş slot ── */
+        bg.lineStyle(1, 0x00ffff, 0.09);
+        bg.strokeRoundedRect(44, sy, W - 88, SH, 14);
+        this.wSlotOrb[i]
+          .setFillStyle(0x010a10, 1)
+          .setStrokeStyle(2, 0x0d2030, 1);
+        this.wSlotName[i].setVisible(false);
+        this.wSlotSub[i].setVisible(false);
+        this.wSlotEmpty[i].setVisible(true);
       }
-
-      const hex = colorHex(p.color);
-      this.playerListTxts[i].setText(
-        `■  ${p.name}${p.isHost ? '  👑' : ''}${p.id === roomState.myId ? '  ◄' : ''}`,
-      );
-      this.playerListTxts[i].setStyle({ color: hex });
-
-      rb.g.fillStyle(p.color, 0.06);
-      rb.g.fillRoundedRect(52, rb.y - 26, W - 104, 52, 10);
-      rb.g.lineStyle(1, p.color, 0.24);
-      rb.g.strokeRoundedRect(52, rb.y - 26, W - 104, 52, 10);
     }
 
+    /* Başlat butonu */
     this.startBtn?.setVisible(amHost);
     if (amHost) {
-      const ok = players.length >= 1;
-      this.startBtnLabel?.setStyle({ color: ok ? '#001800' : '#223322' });
-      this.startBtn?.setAlpha(ok ? 1 : 0.40);
+      const can = players.length >= 2;
+      this.startBtnLabel?.setStyle({ color: can ? '#001a00' : '#1a2a1a' });
+      this.startBtn?.setAlpha(can ? 1 : 0.35);
     }
   }
 
