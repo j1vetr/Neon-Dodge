@@ -1,6 +1,7 @@
 /* =================================================================
    UPDATE CHECK — 60 sn'de bir /version.json çeker.
-   Build timestamp farklıysa neon banner gösterir.
+   Sunucudaki versiyon farklıysa neon banner gösterir.
+   Kullanıcı yeniledikten sonra aynı versiyon tekrar gösterilmez.
    ================================================================= */
 
 declare const __BUILD_TS__: number;
@@ -9,9 +10,11 @@ const BUILD_TS: number =
   typeof __BUILD_TS__ !== 'undefined' ? __BUILD_TS__ : 0;
 
 const CHECK_INTERVAL_MS = 60_000;
+const DISMISSED_KEY = 'neonDodge_dismissedVersion';
+
 let bannerShown = false;
 
-function _showBanner() {
+function _showBanner(serverTs: number) {
   if (bannerShown) return;
   bannerShown = true;
 
@@ -35,28 +38,33 @@ function _showBanner() {
     boxShadow:   '0 3px 16px rgba(0,210,255,0.55)',
   });
   el.textContent = '🔄 YENİ GÜNCELLEME HAZIR — YENİLEMEK İÇİN DOKUN';
-  el.onclick = () => location.reload();
+  el.onclick = () => {
+    localStorage.setItem(DISMISSED_KEY, String(serverTs));
+    location.reload();
+  };
   document.body.appendChild(el);
 }
 
 async function _checkOnce() {
-  if (bannerShown || BUILD_TS === 0) return;
+  if (bannerShown) return;
   try {
     const base = import.meta.env.BASE_URL ?? '/';
     const url  = `${base}version.json?_=${Date.now()}`;
     const res  = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return;
     const { ts } = (await res.json()) as { ts: number };
-    if (ts > BUILD_TS) _showBanner();
+
+    const dismissed = Number(localStorage.getItem(DISMISSED_KEY) || '0');
+    if (ts === dismissed) return;
+
+    if (ts > BUILD_TS) _showBanner(ts);
   } catch {
     /* ağ hatası — sessizce geç */
   }
 }
 
 export function startUpdateCheck() {
-  /* Sadece production'da çalış */
   if (import.meta.env.DEV) return;
   setInterval(_checkOnce, CHECK_INTERVAL_MS);
-  /* İlk kontrol 10sn sonra (sayfa tam yüklendikten sonra) */
   setTimeout(_checkOnce, 10_000);
 }
