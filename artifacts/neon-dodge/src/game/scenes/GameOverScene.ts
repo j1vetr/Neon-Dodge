@@ -18,12 +18,14 @@ export class GameOverScene extends Phaser.Scene {
   private levelReached = 1;
   private maxCombo = 0;
   private elapsedTime = 0;
+  private hasRevived = false;
 
   constructor() { super({ key: 'GameOverScene' }); }
 
   init(data: {
     score: number; best: number; skin: number;
     level?: number; maxCombo?: number; elapsedTime?: number;
+    hasRevived?: boolean;
   }) {
     this.score        = data.score ?? 0;
     this.best         = data.best ?? 0;
@@ -31,6 +33,7 @@ export class GameOverScene extends Phaser.Scene {
     this.levelReached = data.level ?? 1;
     this.maxCombo     = data.maxCombo ?? 0;
     this.elapsedTime  = data.elapsedTime ?? 0;
+    this.hasRevived   = data.hasRevived ?? false;
   }
 
   create() {
@@ -110,13 +113,16 @@ export class GameOverScene extends Phaser.Scene {
     this._divider(H * 0.57);
 
     /* ---- Buttons ---- */
-    this._makeButton(W / 2, H * 0.645, t().watchAd, '#ffcc00', 420, 76,
-      () => this._showAdPlaceholder());
+    if (!this.hasRevived) {
+      this._makeButton(W / 2, H * 0.645, t().watchAd, '#ffcc00', 420, 76,
+        () => this._showAdPlaceholder());
+    }
 
-    this._makeButton(W / 2, H * 0.735, t().playAgain, '#00ffff', 360, 80,
+    const btnOffset = this.hasRevived ? -0.045 : 0;
+    this._makeButton(W / 2, H * (0.735 + btnOffset), t().playAgain, '#00ffff', 360, 80,
       () => this.scene.start('GameScene', { skin: this.skinIndex }));
 
-    this._makeButton(W / 2, H * 0.825, t().menu, '#ff2060', 240, 68,
+    this._makeButton(W / 2, H * (0.825 + btnOffset), t().menu, '#ff2060', 240, 68,
       () => this.scene.start('StartScene'));
 
     /* ---- Bottom accent ---- */

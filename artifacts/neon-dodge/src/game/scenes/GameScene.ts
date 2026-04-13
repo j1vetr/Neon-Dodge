@@ -1189,6 +1189,7 @@ export class GameScene extends Phaser.Scene {
           level: this.currentLevel + 1,
           maxCombo: this.maxCombo,
           elapsedTime: Math.floor(this.elapsedTime),
+          hasRevived: this.reviveData.active,
         });
       }
     });
