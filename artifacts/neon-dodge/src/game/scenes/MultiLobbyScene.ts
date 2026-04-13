@@ -48,8 +48,8 @@ export class MultiLobbyScene extends Phaser.Scene {
   private joinArrow!: Phaser.GameObjects.Text;
 
   /* Entry — status */
-  private statusDot!:  Phaser.GameObjects.Arc;
-  private statusTxt!:  Phaser.GameObjects.Text;
+  private statusDot?:  Phaser.GameObjects.Arc;
+  private statusTxt?:  Phaser.GameObjects.Text;
   private errorTxt!:   Phaser.GameObjects.Text;
   private errorTimer?: Phaser.Time.TimerEvent;
 
@@ -238,17 +238,13 @@ export class MultiLobbyScene extends Phaser.Scene {
     const c = this.entryContainer = this.add.container(0, 0);
 
     /* ── BAŞLIK ── */
-    this._neonTitle(c, CX, 96, '⬡  ÇOK OYUNCULU', '#ff8800', 0xff8800, '44px');
-
-    /* ── DURUM ── */
-    this.statusDot = this.add.circle(CX - 84, 154, 6, 0xffaa00, 1);
-    this.statusTxt = this.add.text(CX - 72, 154, 'BAĞLANIYOR...', {
-      fontSize: '17px', fontFamily: '"Orbitron",monospace', color: '#ffaa00',
-    }).setOrigin(0, 0.5);
-    c.add([this.statusDot, this.statusTxt]);
+    c.add(this.add.text(CX, 96, '⬡  ÇOK OYUNCULU', {
+      fontSize: '44px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+      color: '#ff8800',
+    }).setOrigin(0.5));
 
     /* ── HATA MESAJI ── */
-    this.errorTxt = this.add.text(CX, 188, '', {
+    this.errorTxt = this.add.text(CX, 148, '', {
       fontSize: '17px', fontFamily: '"Orbitron",monospace', color: '#ff4466',
       align: 'center',
     }).setOrigin(0.5, 0).setAlpha(0);
@@ -419,7 +415,10 @@ export class MultiLobbyScene extends Phaser.Scene {
     const c = this.waitingContainer = this.add.container(0, 0);
 
     /* ── BAŞLIK ── */
-    this._neonTitle(c, CX, 58, '⬡  BEKLEME ODASI', '#00ffff', 0x00ffff, '44px');
+    c.add(this.add.text(CX, 58, '⬡  BEKLEME ODASI', {
+      fontSize: '44px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+      color: '#00ffff',
+    }).setOrigin(0.5));
     c.add(this.add.text(CX, 96, 'ARKADAŞLARINI DAVET ET', {
       fontSize: '14px', fontFamily: '"Orbitron",monospace',
       color: '#0e2c38', letterSpacing: 5,
@@ -460,7 +459,6 @@ export class MultiLobbyScene extends Phaser.Scene {
       const lt = this.add.text(bx + BW / 2, BCY, '·', {
         fontSize: '34px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
         color: '#00ffff',
-        shadow: { color: '#00ffff', blur: 18, fill: true, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5);
       this.waitCodeLetters.push(lt);
       c.add(lt);
