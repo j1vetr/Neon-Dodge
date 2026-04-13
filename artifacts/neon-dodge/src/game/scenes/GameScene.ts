@@ -1307,8 +1307,8 @@ export class GameScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT, CX = W / 2;
     const bg = this.add.rectangle(CX, H / 2, W, H, 0x000008, 0.84).setDepth(50);
     const title = this.add.text(CX, H * 0.32, '⏳ DİĞERLERİ OYNUYOR...', {
-      fontSize: '36px', fontFamily: '"Orbitron", monospace',
-      color: '#00ffff', stroke: '#003366', strokeThickness: 3,
+      fontSize: '36px', fontFamily: 'Arial, sans-serif',
+      color: '#00ffff',
     }).setOrigin(0.5).setDepth(51);
 
     this.multiWaitTxt = this.add.text(CX, H * 0.48, '', {
@@ -1401,6 +1401,8 @@ export class GameScene extends Phaser.Scene {
     s.off('player-pos');
     s.off('player-died');
     s.off('game-over');
+    /* 2. oyun için eski dot referanslarını temizle */
+    this.multiDots.clear();
     s.off('player-left');
   }
 }

@@ -229,6 +229,7 @@ export class MultiLobbyScene extends Phaser.Scene {
       for (const p of players) roomState.players.set(p.id, p);
       this._showPhase('waiting');
       this._renderPlayerList();
+      this._setWaitCode(roomState.code);  /* kodu kutulara yeniden yaz */
     });
   }
 
@@ -1136,13 +1137,11 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _neonTitle(
     c: Phaser.GameObjects.Container,
     x: number, y: number, txt: string,
-    hex: string, col: number, size: string,
+    hex: string, _col: number, size: string,
   ) {
     c.add(this.add.text(x, y, txt, {
       fontSize: size, fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
       color: hex,
-      stroke: colorHex(col & 0x333333), strokeThickness: 3,
-      shadow: { color: hex, blur: 28, fill: false, stroke: true, offsetX: 0, offsetY: 0 },
     }).setOrigin(0.5));
   }
 
