@@ -229,18 +229,19 @@ export class MultiLobbyScene extends Phaser.Scene {
     }).setOrigin(1, 0.5);
     c.add(this.nameCounter);
 
-    /* Görsel kart (arka plan + kenarlık) */
-    this.nameBorder = this.add.graphics();
+    /* Görsel kart (arka plan + kenarlık) — canvas katmanı */
+    this.nameBorder = this.add.graphics().setDepth(4);
     this._drawNameBorder(0xff8800, 0.5);
     c.add(this.nameBorder);
 
-    /* Placeholder hint metni — DOM inputun üstünde, input boşken görünür */
+    /* Placeholder hint — canvas katmanı, input boşken görünür */
     const hintTxt = this.add.text(CX, 304, 'ADINI GİR', {
       fontSize: '26px', fontFamily: '"Orbitron",monospace',
       color: '#553311', letterSpacing: 6,
-    }).setOrigin(0.5).setName('nameHint');
+    }).setOrigin(0.5).setDepth(5);
     c.add(hintTxt);
 
+    /* ── DOM input: CONTAINER'A EKLEME, sahneye doğrudan bağlı ── */
     this.nameDom = this.add.dom(CX, 304, 'input', `
       width:620px; height:72px;
       background:transparent; border:none;
@@ -249,17 +250,16 @@ export class MultiLobbyScene extends Phaser.Scene {
       text-align:center; outline:none;
       text-transform:uppercase; letter-spacing:6px;
       padding:0; margin:0; cursor:text;
-    `).setDepth(10);
-    const ni = this.nameInput = this.nameDom.node as HTMLInputElement;
-    ni.maxLength   = 8;
-    ni.value       = localStorage.getItem(STORAGE_NAME) || '';
-    this._updateCounter();
-    c.add(this.nameDom);
+      pointer-events:auto;
+    `).setDepth(20);
+    /* NOT: c.add(this.nameDom) çağrılmıyor — container pointer events'i kırar */
 
-    /* Hint metni: value boşken göster */
-    const _syncHint = () => {
-      hintTxt.setVisible(ni.value.length === 0);
-    };
+    const ni = this.nameInput = this.nameDom.node as HTMLInputElement;
+    ni.maxLength = 8;
+    ni.value     = localStorage.getItem(STORAGE_NAME) || '';
+    this._updateCounter();
+
+    const _syncHint = () => hintTxt.setVisible(ni.value.length === 0);
     _syncHint();
     ni.addEventListener('input',   () => { this._onNameInput(); _syncHint(); });
     ni.addEventListener('focus',   () => { hintTxt.setVisible(false); this._drawNameBorder(0xff8800, 0.9); });
@@ -329,17 +329,19 @@ export class MultiLobbyScene extends Phaser.Scene {
       this.codeLetters.push(lt);
     }
 
-    /* Invisible wide input over the boxes */
+    /* Invisible wide input over the boxes — CONTAINER'A EKLEME */
     this.joinCodeDom = this.add.dom(CX, 884, 'input', `
       width:${boxTotalW + 20}px; height:${boxH + 10}px;
       background:transparent; border:none; outline:none;
       color:transparent; caret-color:transparent;
       font-size:1px; letter-spacing:0;
-    `).setDepth(15);
+      pointer-events:auto;
+    `).setDepth(25).setVisible(false);
+    /* NOT: joinSection.add(this.joinCodeDom) yok — pointer events kırar */
+
     const ji = this.joinCodeInput = this.joinCodeDom.node as HTMLInputElement;
     ji.maxLength = 5;
     ji.autocomplete = 'off';
-    this.joinSection.add(this.joinCodeDom);
 
     ji.addEventListener('input',   () => this._onCodeInput());
     ji.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doJoin(); });
