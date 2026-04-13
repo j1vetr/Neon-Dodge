@@ -229,28 +229,41 @@ export class MultiLobbyScene extends Phaser.Scene {
     }).setOrigin(1, 0.5);
     c.add(this.nameCounter);
 
-    /* Görsel kenarlık — ayrı Graphics nesnesi */
+    /* Görsel kart (arka plan + kenarlık) */
     this.nameBorder = this.add.graphics();
-    this._drawNameBorder(0xff8800, 0.45);
+    this._drawNameBorder(0xff8800, 0.5);
     c.add(this.nameBorder);
 
+    /* Placeholder hint metni — DOM inputun üstünde, input boşken görünür */
+    const hintTxt = this.add.text(CX, 304, 'ADINI GİR', {
+      fontSize: '26px', fontFamily: '"Orbitron",monospace',
+      color: '#553311', letterSpacing: 6,
+    }).setOrigin(0.5).setName('nameHint');
+    c.add(hintTxt);
+
     this.nameDom = this.add.dom(CX, 304, 'input', `
-      width:600px; height:64px;
+      width:620px; height:72px;
       background:transparent; border:none;
       color:#ff8800; font-family:"Orbitron",monospace;
       font-size:30px; font-weight:700;
       text-align:center; outline:none;
       text-transform:uppercase; letter-spacing:6px;
-      padding:0; margin:0;
+      padding:0; margin:0; cursor:text;
     `).setDepth(10);
     const ni = this.nameInput = this.nameDom.node as HTMLInputElement;
     ni.maxLength   = 8;
-    ni.placeholder = 'ADINI GİR';
     ni.value       = localStorage.getItem(STORAGE_NAME) || '';
     this._updateCounter();
     c.add(this.nameDom);
 
-    ni.addEventListener('input',   () => this._onNameInput());
+    /* Hint metni: value boşken göster */
+    const _syncHint = () => {
+      hintTxt.setVisible(ni.value.length === 0);
+    };
+    _syncHint();
+    ni.addEventListener('input',   () => { this._onNameInput(); _syncHint(); });
+    ni.addEventListener('focus',   () => { hintTxt.setVisible(false); this._drawNameBorder(0xff8800, 0.9); });
+    ni.addEventListener('blur',    () => { _syncHint(); this._drawNameBorder(0xff8800, 0.5); });
     ni.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doCreate(); });
 
     c.add(this._hRule(348, 0xff8800, 0.18));
@@ -282,14 +295,14 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     const jBg = this.add.graphics();
     jBg.fillStyle(0x06040e, 0.96);
-    jBg.fillRoundedRect(60, 790, W - 120, 220, 18);
+    jBg.fillRoundedRect(60, 790, W - 120, 252, 18);
     jBg.lineStyle(2, 0xff8800, 0.45);
-    jBg.strokeRoundedRect(60, 790, W - 120, 220, 18);
+    jBg.strokeRoundedRect(60, 790, W - 120, 252, 18);
     jBg.lineStyle(3, 0xff8800, 0.9);
     jBg.lineBetween(80, 792, W - 80, 792);
     this.joinSection.add(jBg);
 
-    this.joinSection.add(this.add.text(CX, 822, 'ODA KODU', {
+    this.joinSection.add(this.add.text(CX, 820, 'ODA KODU', {
       fontSize: '15px', fontFamily: '"Orbitron",monospace',
       color: '#553300', letterSpacing: 5,
     }).setOrigin(0.5));
@@ -333,7 +346,7 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     /* KATIL button inside join section */
     this.joinSection.add(
-      this._smallBtn(CX, 1000, '  KATIL  ', 0xff8800, () => this._doJoin()),
+      this._smallBtn(CX, 968, '  KATIL  ', 0xff8800, () => this._doJoin()),
     );
 
     /* ── BACK ── */
@@ -682,8 +695,15 @@ export class MultiLobbyScene extends Phaser.Scene {
 
   private _drawNameBorder(col: number, alpha: number) {
     this.nameBorder?.clear();
+    /* Kart arka planı */
+    this.nameBorder?.fillStyle(0x0c0818, 0.85);
+    this.nameBorder?.fillRoundedRect(78, 272, W - 156, 72, 12);
+    /* Kenarlık */
     this.nameBorder?.lineStyle(2, col, alpha);
-    this.nameBorder?.lineBetween(80, 332, W - 80, 332);
+    this.nameBorder?.strokeRoundedRect(78, 272, W - 156, 72, 12);
+    /* Üst vurgu çizgisi */
+    this.nameBorder?.lineStyle(3, col, Math.min(1, alpha * 1.6));
+    this.nameBorder?.lineBetween(96, 273.5, W - 96, 273.5);
   }
 
   /* ==============================================================
