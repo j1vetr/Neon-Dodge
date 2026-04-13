@@ -27,11 +27,16 @@ export class MultiLobbyScene extends Phaser.Scene {
   private waitingContainer!: Phaser.GameObjects.Container;
   private resultsContainer!: Phaser.GameObjects.Container;
 
-  /* Entry — name */
-  private nameDom!:      Phaser.GameObjects.DOMElement;
-  private nameInput!:    HTMLInputElement;
-  private nameCounter!:  Phaser.GameObjects.Text;
-  private nameBorder!:   Phaser.GameObjects.Graphics;
+  /* Entry — name (pure Phaser keyboard, no DOM) */
+  private nameValue   = '';
+  private nameActive  = false;
+  private cursorOn    = false;
+  private nameHint!:   Phaser.GameObjects.Text;
+  private nameTxt!:    Phaser.GameObjects.Text;
+  private nameCounter!:Phaser.GameObjects.Text;
+  private nameBorder!: Phaser.GameObjects.Graphics;
+  private nameHitBox!: Phaser.GameObjects.Rectangle;
+  /* joinCodeDom kept — oda kodu DOM input'u çalışıyor */
 
   /* Entry — join code (5-box) */
   private joinCodeDom!:   Phaser.GameObjects.DOMElement;
@@ -112,6 +117,24 @@ export class MultiLobbyScene extends Phaser.Scene {
     this._buildResultsPanel();
     this._bindSocket();
 
+    /* ── Klavye ile ad girişi ── */
+    this.input.keyboard?.on('keydown', (e: KeyboardEvent) => {
+      if (this.phase !== 'entry' || !this.nameActive) return;
+      if (e.key === 'Backspace') {
+        this.nameValue = this.nameValue.slice(0, -1);
+      } else if (e.key === 'Enter') {
+        this._doCreate(); return;
+      } else if (e.key === 'Escape') {
+        this.nameActive = false;
+      } else if (e.key.length === 1 && /[A-Za-z0-9ığüşöçİĞÜŞÖÇ ]/.test(e.key) && this.nameValue.length < 8) {
+        this.nameValue += e.key.toUpperCase();
+      }
+      this._renderNameTxt();
+      this._updateCounter();
+      this._drawNameBorder(0xff8800, 0.45);
+      this.errorTxt?.setAlpha(0);
+    });
+
     this._showPhase(this.phase);
     if (this.phase === 'results' && this.incomingResults) this._renderResults(this.incomingResults);
     if (this.phase === 'waiting') this._renderPlayerList();
@@ -123,8 +146,8 @@ export class MultiLobbyScene extends Phaser.Scene {
     s.off('room-created');  s.off('room-joined');  s.off('room-error');
     s.off('player-joined'); s.off('player-left');
     s.off('game-starting'); s.off('game-over');    s.off('lobby-reset');
-    this.nameDom?.destroy();
     this.joinCodeDom?.destroy();
+    this.nameActive = false;
   }
 
   /* ==============================================================
@@ -229,42 +252,62 @@ export class MultiLobbyScene extends Phaser.Scene {
     }).setOrigin(1, 0.5);
     c.add(this.nameCounter);
 
-    /* Görsel kart (arka plan + kenarlık) — canvas katmanı */
-    this.nameBorder = this.add.graphics().setDepth(4);
+    /* ── AD KUTUSU — saf Phaser (DOM yok) ── */
+    /* Görsel kart */
+    this.nameBorder = this.add.graphics();
     this._drawNameBorder(0xff8800, 0.5);
     c.add(this.nameBorder);
 
-    /* Placeholder hint — canvas katmanı, input boşken görünür */
-    const hintTxt = this.add.text(CX, 304, 'ADINI GİR', {
+    /* Placeholder */
+    this.nameHint = this.add.text(CX, 308, 'ADINI GİR', {
       fontSize: '26px', fontFamily: '"Orbitron",monospace',
       color: '#553311', letterSpacing: 6,
-    }).setOrigin(0.5).setDepth(5);
-    c.add(hintTxt);
+    }).setOrigin(0.5);
+    c.add(this.nameHint);
 
-    /* ── DOM input: CONTAINER'A EKLEME, sahneye doğrudan bağlı ── */
-    this.nameDom = this.add.dom(CX, 304, 'input', `
-      width:620px; height:72px;
-      background:transparent; border:none;
-      color:#ff8800; font-family:"Orbitron",monospace;
-      font-size:30px; font-weight:700;
-      text-align:center; outline:none;
-      text-transform:uppercase; letter-spacing:6px;
-      padding:0; margin:0; cursor:text;
-      pointer-events:auto;
-    `).setDepth(20);
-    /* NOT: c.add(this.nameDom) çağrılmıyor — container pointer events'i kırar */
+    /* Yazılan metin */
+    this.nameTxt = this.add.text(CX, 308, '', {
+      fontSize: '28px', fontFamily: '"Orbitron",monospace',
+      color: '#ff8800', letterSpacing: 5, fontStyle: 'bold',
+    }).setOrigin(0.5);
+    c.add(this.nameTxt);
 
-    const ni = this.nameInput = this.nameDom.node as HTMLInputElement;
-    ni.maxLength = 8;
-    ni.value     = localStorage.getItem(STORAGE_NAME) || '';
+    /* Tıklanabilir şeffaf hitbox */
+    this.nameHitBox = this.add.rectangle(CX, 308, W - 156, 72, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    c.add(this.nameHitBox);
+
+    this.nameHitBox.on('pointerdown', () => {
+      this.nameActive = true;
+      this._drawNameBorder(0xff8800, 0.9);
+      this._renderNameTxt();
+    });
+
+    /* Başka yere tıklayınca deaktif */
+    this.input.on('pointerdown', (_p: unknown, objs: Phaser.GameObjects.GameObject[]) => {
+      if (!objs.includes(this.nameHitBox)) {
+        this.nameActive = false;
+        this.cursorOn   = false;
+        this._drawNameBorder(0xff8800, 0.5);
+        this._renderNameTxt();
+      }
+    });
+
+    /* İmleç yanıp sönme */
+    this.time.addEvent({
+      delay: 530, loop: true,
+      callback: () => {
+        if (this.nameActive && this.phase === 'entry') {
+          this.cursorOn = !this.cursorOn;
+          this._renderNameTxt();
+        }
+      },
+    });
+
+    /* Başlangıç değeri */
+    this.nameValue = (localStorage.getItem(STORAGE_NAME) || '').toUpperCase().slice(0, 8);
+    this._renderNameTxt();
     this._updateCounter();
-
-    const _syncHint = () => hintTxt.setVisible(ni.value.length === 0);
-    _syncHint();
-    ni.addEventListener('input',   () => { this._onNameInput(); _syncHint(); });
-    ni.addEventListener('focus',   () => { hintTxt.setVisible(false); this._drawNameBorder(0xff8800, 0.9); });
-    ni.addEventListener('blur',    () => { _syncHint(); this._drawNameBorder(0xff8800, 0.5); });
-    ni.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doCreate(); });
 
     c.add(this._hRule(348, 0xff8800, 0.18));
 
@@ -553,9 +596,11 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.waitingContainer?.setVisible(ph === 'waiting');
     this.resultsContainer?.setVisible(ph === 'results');
 
-    /* DOM elements must be explicitly hidden when not in entry */
-    if (this.nameDom)     this.nameDom.setVisible(ph === 'entry');
+    /* joinCodeDom hâlâ DOM — entry+join açıkken görünür */
     if (this.joinCodeDom) this.joinCodeDom.setVisible(ph === 'entry' && this.joinOpen);
+
+    /* Ad kutusu deaktif olsun */
+    if (ph !== 'entry') { this.nameActive = false; this.cursorOn = false; }
   }
 
   /* ==============================================================
@@ -583,7 +628,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _getValidName(): string | null {
-    const name = this.nameInput.value.toUpperCase().trim();
+    const name = this.nameValue.trim();
     if (name.length < 2) {
       this._showError('EN AZ 2 KARAKTER GİR');
       this._shakeNameInput();
@@ -615,13 +660,10 @@ export class MultiLobbyScene extends Phaser.Scene {
   /* ==============================================================
      INPUT HANDLERS
   ============================================================== */
-  private _onNameInput() {
-    const v = this.nameInput.value.toUpperCase();
-    this.nameInput.value = v;
-    this._updateCounter();
-    /* Reset border color */
-    this._drawNameBorder(0xff8800, 0.45);
-    this.errorTxt?.setAlpha(0);
+  private _renderNameTxt() {
+    const cursor = (this.nameActive && this.cursorOn) ? '|' : '';
+    this.nameTxt?.setText(this.nameValue + cursor);
+    this.nameHint?.setVisible(this.nameValue.length === 0 && !this.nameActive);
   }
 
   private _onCodeInput() {
@@ -631,7 +673,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _updateCounter() {
-    const len = this.nameInput.value.length;
+    const len = this.nameValue.length;
     this.nameCounter?.setText(`${len}/8`);
     this.nameCounter?.setStyle({ color: len >= 7 ? '#ff8800' : '#443322' });
   }
@@ -679,11 +721,12 @@ export class MultiLobbyScene extends Phaser.Scene {
 
   private _shakeNameInput() {
     this._drawNameBorder(0xff4466, 0.9);
-    const ox = this.nameDom.x;
+    const targets = [this.nameTxt, this.nameHint, this.nameBorder].filter(Boolean);
+    const ox = this.nameTxt?.x ?? CX;
     this.tweens.add({
-      targets: this.nameDom, x: ox + 12,
+      targets, x: ox + 12,
       duration: 40, yoyo: true, repeat: 3, ease: 'Linear',
-      onComplete: () => { this.nameDom.x = ox; },
+      onComplete: () => targets.forEach(t => { (t as any).x = ox; }),
     });
   }
 
