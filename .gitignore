@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Auto-generated at build time
+artifacts/neon-dodge/public/version.json
