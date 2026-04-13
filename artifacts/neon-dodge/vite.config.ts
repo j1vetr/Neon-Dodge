@@ -27,10 +27,6 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            urlPattern: /version\.json/,
-            handler: 'NetworkOnly',
-          },
-          {
             urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
@@ -56,9 +52,6 @@ export default defineConfig({
         ]
       : []),
   ],
-  define: {
-    __BUILD_TS__: JSON.stringify(Date.now()),
-  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),

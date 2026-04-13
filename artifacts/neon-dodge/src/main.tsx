@@ -1,9 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { startUpdateCheck } from "./updateCheck";
-
-startUpdateCheck();
 
 /* Suppress "Cannot suspend/resume a closed AudioContext" unhandled rejections.
    These are harmless HMR artefacts: when Vite hot-reloads, the old Phaser
