@@ -124,6 +124,7 @@ export class StartScene extends Phaser.Scene {
         p.circle.destroy();
         this.fireParticles.splice(i, 1);
       } else {
+        if (!p.circle.active) { this.fireParticles.splice(i, 1); continue; }
         const t = age / p.lifetime;
         p.circle.x += p.vx * dt;
         p.circle.y += p.vy * dt;
