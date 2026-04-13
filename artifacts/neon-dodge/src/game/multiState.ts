@@ -31,7 +31,7 @@ function getSocketUrl(): string {
   return window.location.origin;
 }
 
-const SOCKET_PATH = '/api-server/socket.io';
+const SOCKET_PATH = '/api/socket.io';
 
 let _socket: Socket | null = null;
 

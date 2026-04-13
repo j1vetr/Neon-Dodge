@@ -20,8 +20,8 @@ const httpServer = createServer(app);
 
 const io = new SocketIOServer(httpServer, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
-  /* Replit path-based proxy: /api-server prefix */
-  path: '/api-server/socket.io',
+  /* Artifact routes /api → this server; socket.io lives at /api/socket.io */
+  path: '/api/socket.io',
   transports: ['websocket', 'polling'],
 });
 

@@ -76,6 +76,14 @@ export default defineConfig({
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      /* Forward /api/* (and WebSocket upgrades) to the API server */
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        ws: true,
+      },
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],
