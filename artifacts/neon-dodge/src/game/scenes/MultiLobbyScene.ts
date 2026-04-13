@@ -543,6 +543,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     });
     c.add(this.startBtn);
     this.startBtnLabel = this.startBtn.getByName('lbl') as Phaser.GameObjects.Text;
+    this.startBtnLabel?.setStyle({ color: '#ffffff' });
 
     /* Geri butonu */
     c.add(this._backBtn(CX, botY + 210, () => {
@@ -713,7 +714,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.startBtn?.setVisible(amHost);
     if (amHost) {
       const can = players.length >= 2;
-      this.startBtnLabel?.setStyle({ color: can ? '#001a00' : '#1a2a1a' });
+      this.startBtnLabel?.setStyle({ color: can ? '#ffffff' : '#4a6a4a' });
       this.startBtn?.setAlpha(can ? 1 : 0.35);
     }
   }
