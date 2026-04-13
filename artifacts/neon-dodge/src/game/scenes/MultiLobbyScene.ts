@@ -396,6 +396,28 @@ export class MultiLobbyScene extends Phaser.Scene {
     ji.addEventListener('input',   () => this._onCodeInput());
     ji.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._doJoin(); });
 
+    /* Mobil: klavye açılınca input'u görünür alana kaydır */
+    const vv = (window as any).visualViewport as (EventTarget & { offsetTop: number; height: number }) | null;
+    let _vvHandler: (() => void) | null = null;
+    ji.addEventListener('focus', () => {
+      setTimeout(() => ji.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 100);
+      if (vv) {
+        _vvHandler = () => {
+          window.scrollTo({ top: vv.offsetTop, behavior: 'instant' as ScrollBehavior });
+        };
+        vv.addEventListener('resize', _vvHandler);
+        vv.addEventListener('scroll', _vvHandler);
+      }
+    });
+    ji.addEventListener('blur', () => {
+      if (vv && _vvHandler) {
+        vv.removeEventListener('resize', _vvHandler);
+        vv.removeEventListener('scroll', _vvHandler);
+        _vvHandler = null;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+
     /* KATIL button inside join section */
     this.joinSection.add(
       this._smallBtn(CX, 968, '  KATIL  ', 0xff8800, () => this._doJoin()),
@@ -848,13 +870,20 @@ export class MultiLobbyScene extends Phaser.Scene {
 
   private _shakeNameInput() {
     this._drawNameBorder(0xff4466, 0.9);
-    const targets = [this.nameTxt, this.nameHint, this.nameBorder].filter(Boolean);
-    const ox = this.nameTxt?.x ?? CX;
-    this.tweens.add({
-      targets, x: ox + 12,
-      duration: 40, yoyo: true, repeat: 3, ease: 'Linear',
-      onComplete: () => targets.forEach(t => { (t as any).x = ox; }),
-    });
+    /* Her nesnenin kendi başlangıç x'i — nameBorder=0, nameTxt=CX */
+    const shake = (t: Phaser.GameObjects.GameObject | undefined) => {
+      if (!t) return;
+      const ox = (t as any).x as number;
+      this.tweens.add({
+        targets: t, x: ox + 14,
+        duration: 40, yoyo: true, repeat: 3, ease: 'Linear',
+        onComplete: () => { (t as any).x = ox; },
+      });
+    };
+    shake(this.nameBorder);
+    shake(this.nameTxt);
+    shake(this.nameHint);
+    shake(this.nameHitBox);
   }
 
   private _shakeCodeBoxes() {
