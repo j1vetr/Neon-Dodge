@@ -156,6 +156,9 @@ export const BASE_WAVE_BONUS       = 20;   /* güvenli geçiş baz puanı (combo
 export const POWERUP_SIZE            = 28;
 export const POWERUP_SPAWN_CHANCE    = 0.20;
 export const POWERUP_DOUBLE_DURATION = 5000;
+export const POWERUP_SHRINK_DURATION = 4000;
+export const POWERUP_SHRINK_SCALE    = 0.5;
+export const COLOR_SHRINK            = 0xddaa00;
 
 /* Sound */
 export const STORAGE_SOUND = 'neonDodge_sound';

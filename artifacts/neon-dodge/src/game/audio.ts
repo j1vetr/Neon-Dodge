@@ -131,8 +131,8 @@ export function playNearMiss() {
 }
 
 /** Power-up collect sparkle */
-export function playPowerUp(type: 'shield' | 'double') {
-  const freqs: Record<string, number> = { shield: 660, double: 880 };
+export function playPowerUp(type: 'shield' | 'double' | 'shrink') {
+  const freqs: Record<string, number> = { shield: 660, double: 880, shrink: 550 };
   const f = freqs[type] ?? 660;
   playTone(f, 'sine', 0.12, 0.15);
   playTone(f * 1.5, 'sine', 0.09, 0.1);

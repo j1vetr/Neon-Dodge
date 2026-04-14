@@ -23,6 +23,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('icon-settings',  '/assets/icon-settings.png');
     this.load.image('icon-sound-on',  '/assets/icon-sound-on.png');
     this.load.image('icon-sound-off', '/assets/icon-sound-off.png');
+    this.load.image('icon-shrink',    '/assets/shrink.png');
     for (let i = 1; i <= 10; i++) {
       this.load.image(`planet-${i}`, `/assets/planets/planet-${i}.png`);
     }

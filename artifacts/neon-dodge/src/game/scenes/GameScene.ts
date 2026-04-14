@@ -19,6 +19,7 @@ import {
   COMBO_X2, COMBO_X3, COMBO_X4, COMBO_X5,
   NEAR_MISS_DISTANCE, NEAR_MISS_WAVE_BONUS, BASE_WAVE_BONUS,
   POWERUP_SIZE, POWERUP_SPAWN_CHANCE, POWERUP_DOUBLE_DURATION,
+  POWERUP_SHRINK_DURATION, POWERUP_SHRINK_SCALE, COLOR_SHRINK,
 } from '../constants';
 import { t } from '../i18n';
 import {
@@ -44,7 +45,7 @@ interface PowerUp {
   body?: Phaser.GameObjects.Rectangle; /* double türü için yok */
   icon: Phaser.GameObjects.Image;
   ring: Phaser.GameObjects.Arc;
-  type: 'shield' | 'double';
+  type: 'shield' | 'double' | 'shrink';
   collected: boolean;
 }
 
@@ -86,9 +87,12 @@ export class GameScene extends Phaser.Scene {
   /* Power-ups */
   private powerUps: PowerUp[] = [];
   private doubleUntil = 0;
+  private shrinkUntil = 0;
+  private shrinkActive = false;
 
   /* Power-up HUD */
   private doubleTimerTxt!: Phaser.GameObjects.Text;
+  private shrinkTimerTxt!: Phaser.GameObjects.Text;
 
   /* Trail */
   private trailParticles: TrailParticle[] = [];
@@ -287,6 +291,11 @@ export class GameScene extends Phaser.Scene {
       stroke: '#885500', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20);
 
+    this.shrinkTimerTxt = this.add.text(W / 2, 130, '', {
+      fontSize: '22px', fontFamily: 'monospace', color: '#ddaa00',
+      stroke: '#665500', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(20);
+
     /* Level-up banner container */
     this.levelBannerContainer = this.add.container(W / 2, H / 2);
     this.levelBannerContainer.setDepth(30);
@@ -336,6 +345,8 @@ export class GameScene extends Phaser.Scene {
     this.shieldCount = 0;
     this.invincibleUntil = 0;
     this.doubleUntil = 0;
+    this.shrinkUntil = 0;
+    this.shrinkActive = false;
 
     /* ── Revive: reklam sonrası kaldığı yerden devam ── */
     if (this.reviveData.active) {
@@ -505,7 +516,8 @@ export class GameScene extends Phaser.Scene {
 
     /* Player horizontal movement */
     const px = this.player.x + this.playerVX * dt;
-    const hitWall = px < PLAYER_SIZE + 4 || px > GAME_WIDTH - PLAYER_SIZE - 4;
+    const wallMargin = (this.shrinkActive ? PLAYER_SIZE * POWERUP_SHRINK_SCALE : PLAYER_SIZE) + 4;
+    const hitWall = px < wallMargin || px > GAME_WIDTH - wallMargin;
     if (hitWall) {
       if (this.shieldCount > 0) {
         this._breakShield();
@@ -520,7 +532,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
     }
-    const clamped = Phaser.Math.Clamp(px, PLAYER_SIZE + 4, GAME_WIDTH - PLAYER_SIZE - 4);
+    const clamped = Phaser.Math.Clamp(px, wallMargin, GAME_WIDTH - wallMargin);
     this.player.x   = clamped;
     this.shieldRing.x  = clamped; this.shieldRing.y  = this.player.y;
     this.shieldRing2.x = clamped; this.shieldRing2.y = this.player.y;
@@ -717,10 +729,11 @@ export class GameScene extends Phaser.Scene {
   -------------------------------------------------------- */
   private _spawnPowerUp() {
     const W = GAME_WIDTH;
-    /* Kalkan sayısına göre spawn oranı:
-       0 kalkan → %20 kalkan  |  1 kalkan → %9 kalkan  |  2 kalkan → hiç kalkan */
-    let type: 'shield' | 'double';
-    if (this.shieldCount >= 2) {
+    let type: 'shield' | 'double' | 'shrink';
+    const roll = Math.random();
+    if (roll < 0.08) {
+      type = 'shrink';
+    } else if (this.shieldCount >= 2) {
       type = 'double';
     } else if (this.shieldCount === 1) {
       type = Math.random() < 0.09 ? 'shield' : 'double';
@@ -728,8 +741,8 @@ export class GameScene extends Phaser.Scene {
       type = Math.random() < 0.20 ? 'shield' : 'double';
     }
 
-    const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
-    const color    = colorMap[type];
+    const colorMap: Record<string, number> = { shield: COLOR_SHIELD, double: COLOR_DOUBLE, shrink: COLOR_SHRINK };
+    const color = colorMap[type];
 
     const bw = 88, bh = 88;
     const x = Phaser.Math.Between(bw / 2 + 20, W - bw / 2 - 20);
@@ -744,9 +757,8 @@ export class GameScene extends Phaser.Scene {
       duration: 800, repeat: -1, ease: 'Sine.easeOut',
     });
 
-    /* Shield ve Double: görseller kendi içinde yeterince güzel —
-       kutucuk ve tint yok, orijinal renk korunuyor */
-    const iconKey = type === 'shield' ? 'icon-shield' : 'icon-double';
+    const iconKeyMap: Record<string, string> = { shield: 'icon-shield', double: 'icon-double', shrink: 'icon-shrink' };
+    const iconKey = iconKeyMap[type];
     const icon = this.add.image(x, y, iconKey)
       .setDisplaySize(96, 96)
       .setDepth(7);
@@ -790,7 +802,7 @@ export class GameScene extends Phaser.Scene {
     pu.collected = true;
     playPowerUp(pu.type);
 
-    const colorMap = { shield: COLOR_SHIELD, double: COLOR_DOUBLE };
+    const colorMap: Record<string, number> = { shield: COLOR_SHIELD, double: COLOR_DOUBLE, shrink: COLOR_SHRINK };
     const c = colorMap[pu.type];
     const flash = this.add.circle(pu.icon.x, pu.icon.y, POWERUP_SIZE * 2.5, c, 0.6).setDepth(15);
     this.tweens.add({ targets: flash, alpha: 0, scaleX: 2, scaleY: 2, duration: 280, onComplete: () => flash.destroy() });
@@ -802,10 +814,23 @@ export class GameScene extends Phaser.Scene {
       this._updateShieldVisuals();
     } else if (pu.type === 'double') {
       this.doubleUntil = this.time.now + POWERUP_DOUBLE_DURATION;
+    } else if (pu.type === 'shrink') {
+      this.shrinkUntil = this.time.now + POWERUP_SHRINK_DURATION;
+      if (!this.shrinkActive) {
+        this.shrinkActive = true;
+        this.tweens.add({
+          targets: this.player,
+          scaleX: POWERUP_SHRINK_SCALE,
+          scaleY: POWERUP_SHRINK_SCALE,
+          duration: 200,
+          ease: 'Back.easeOut',
+        });
+      }
     }
 
+    const popupMap: Record<string, string> = { shield: '🛡 SHIELD!', double: '×2 DOUBLE!', shrink: '🔻 SHRINK!' };
     this._showPopupText(
-      pu.type === 'shield' ? '🛡 SHIELD!' : '×2 DOUBLE!',
+      popupMap[pu.type],
       '#' + c.toString(16).padStart(6, '0'),
     );
   }
@@ -1172,6 +1197,23 @@ export class GameScene extends Phaser.Scene {
       this.doubleTimerTxt.setText('');
     }
 
+    if (now < this.shrinkUntil) {
+      const secs = ((this.shrinkUntil - now) / 1000).toFixed(1);
+      this.shrinkTimerTxt.setText(`🔻 SHRINK ${secs}s`);
+    } else {
+      this.shrinkTimerTxt.setText('');
+      if (this.shrinkActive) {
+        this.shrinkActive = false;
+        this.tweens.add({
+          targets: this.player,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 200,
+          ease: 'Back.easeOut',
+        });
+      }
+    }
+
     if (this.time.now < this.invincibleUntil) {
       const blink = Math.sin(this.time.now * 0.04) > 0;
       this.player.setAlpha(blink ? 1 : 0.25);
@@ -1188,7 +1230,8 @@ export class GameScene extends Phaser.Scene {
   private _checkCollision(): boolean {
     if (this.time.now < this.invincibleUntil) return false;
 
-    const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75;
+    const shrinkMult = this.shrinkActive ? POWERUP_SHRINK_SCALE : 1;
+    const px = this.player.x, py = this.player.y, pr = PLAYER_SIZE * 0.75 * shrinkMult;
 
     for (const obs of this.obstacles) {
       const bx = obs.body.x, by = obs.body.y;
