@@ -1391,7 +1391,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.textures.exists(key)) return;
     const scale = 0.35 + Math.random() * 0.5;
     const x = Phaser.Math.Between(80, GAME_WIDTH - 80);
-    const speed = 20 + Math.random() * 35;
+    const speed = 80 + Math.random() * 60;
     const alpha = 0.10 + Math.random() * 0.15;
     const img = this.add.image(x, -180, key)
       .setScale(scale)
