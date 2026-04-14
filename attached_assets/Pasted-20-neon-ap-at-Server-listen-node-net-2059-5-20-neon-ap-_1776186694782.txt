@@ -1,0 +1,43 @@
+20|neon-ap |     at Server.listen (node:net:2059:5)
+20|neon-ap |     at file:///var/www/neon-dodge/artifacts/api-server/src/index.ts:30:12
+20|neon-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+20|neon-ap |     at ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+20|neon-ap |   code: 'ERR_SOCKET_BAD_PORT'
+20|neon-ap | }
+20|neon-ap | RangeError: options.port should be >= 0 and < 65536. Received type number (80532).
+20|neon-ap |     at Server.listen (node:net:2059:5)
+20|neon-ap |     at file:///var/www/neon-dodge/artifacts/api-server/src/index.ts:30:12
+20|neon-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+20|neon-ap |     at ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+20|neon-ap |   code: 'ERR_SOCKET_BAD_PORT'
+20|neon-ap | }
+20|neon-ap | RangeError: options.port should be >= 0 and < 65536. Received type number (80532).
+20|neon-ap |     at Server.listen (node:net:2059:5)
+20|neon-ap |     at file:///var/www/neon-dodge/artifacts/api-server/src/index.ts:30:12
+20|neon-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+20|neon-ap |     at ModuleLoader.import (node:internal/modules/esm/loader:606:24) {
+20|neon-ap |   code: 'ERR_SOCKET_BAD_PORT'
+20|neon-ap | }
+
+/root/.pm2/logs/neon-api-out.log last 20 lines:
+20|neon-ap | {"level":30,"time":1776088794907,"pid":2600509,"hostname":"162-55-4-35.datahost.net.tr","id":"1f0howwZOL7WAnwkAAAD","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776088796271,"pid":2600509,"hostname":"162-55-4-35.datahost.net.tr","id":"CvExqQ6pcUnYZVXzAAAF","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776088817088,"pid":2600509,"hostname":"162-55-4-35.datahost.net.tr","id":"CvExqQ6pcUnYZVXzAAAF","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776089493095,"pid":2621875,"hostname":"162-55-4-35.datahost.net.tr","port":8532,"msg":"Server listening (HTTP + Socket.IO)"}
+20|neon-ap | {"level":30,"time":1776089950210,"pid":2621875,"hostname":"162-55-4-35.datahost.net.tr","id":"4MMYHp50jtyFnGMzAAAB","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776089965794,"pid":2621875,"hostname":"162-55-4-35.datahost.net.tr","id":"4MMYHp50jtyFnGMzAAAB","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776093216561,"pid":2621875,"hostname":"162-55-4-35.datahost.net.tr","id":"qkIZLZzJABB05ML-AAAD","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776093229637,"pid":2621875,"hostname":"162-55-4-35.datahost.net.tr","id":"qkIZLZzJABB05ML-AAAD","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776094939430,"pid":2768726,"hostname":"162-55-4-35.datahost.net.tr","port":8532,"msg":"Server listening (HTTP + Socket.IO)"}
+20|neon-ap | {"level":30,"time":1776106180244,"pid":2768726,"hostname":"162-55-4-35.datahost.net.tr","id":"3tWzZ9D7h9eVGpgqAAAB","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776106214953,"pid":2768726,"hostname":"162-55-4-35.datahost.net.tr","id":"3tWzZ9D7h9eVGpgqAAAB","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776186465187,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","port":8532,"msg":"Server listening (HTTP + Socket.IO)"}
+20|neon-ap | {"level":30,"time":1776186506338,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"GNLF-gvWLj8UMZjKAAAB","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776186512232,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"7xIhUFx1A5cwT7bzAAAD","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776186530543,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"BLKL8hDkVgzfzUEIAAAF","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776186533874,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"oeeRBQuNSjz209PCAAAH","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776186538360,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"7xIhUFx1A5cwT7bzAAAD","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776186556471,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"zNgItRygw5Ylsv9-AAAJ","msg":"socket connected"}
+20|neon-ap | {"level":30,"time":1776186557550,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"GNLF-gvWLj8UMZjKAAAB","msg":"socket disconnected"}
+20|neon-ap | {"level":30,"time":1776186567025,"pid":851590,"hostname":"162-55-4-35.datahost.net.tr","id":"dezvulgIRvVdn_F5AAAL","msg":"socket connected"}
+
