@@ -74,6 +74,7 @@ export const STRINGS = {
     you:           '◀ YOU',
     host:          '👑 HOST',
     mainMenuShort: '←  MAIN MENU',
+    countdownGo:   'GO!',
   },
   tr: {
     noRecord:      'KAYIT YOK',
@@ -135,6 +136,7 @@ export const STRINGS = {
     you:           '◀ SEN',
     host:          '👑 HOST',
     mainMenuShort: '←  ANA MENÜ',
+    countdownGo:   'BAŞLA!',
   },
 } as const;
 

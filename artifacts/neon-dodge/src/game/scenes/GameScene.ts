@@ -157,6 +157,7 @@ export class GameScene extends Phaser.Scene {
   }>();
   private multiWaitOverlay!: Phaser.GameObjects.Container;
   private multiWaitTxt!:     Phaser.GameObjects.Text;
+  private countdownActive = false;
 
   init(data: {
     skin?: number; revive?: boolean; score?: number;
@@ -355,7 +356,76 @@ export class GameScene extends Phaser.Scene {
       this.multiDots = new Map();
       this._buildMultiOverlay();
       this._bindMultiSocket();
+      this._startCountdown();
     }
+  }
+
+  /* --------------------------------------------------------
+     MULTIPLAYER COUNTDOWN  (3 → 2 → 1 → GO!)
+  -------------------------------------------------------- */
+  private _startCountdown() {
+    this.countdownActive = true;
+    this.paused = true;
+
+    const W = GAME_WIDTH;
+    const H = GAME_HEIGHT;
+
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.6).setDepth(90);
+    const countTxt = this.add.text(W / 2, H / 2, '3', {
+      fontSize: '140px',
+      fontFamily: '"Orbitron", monospace',
+      color: '#00ffff',
+      stroke: '#003344',
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(91);
+
+    const steps = ['3', '2', '1', t().countdownGo];
+    let step = 0;
+
+    const tick = () => {
+      if (step >= steps.length) {
+        overlay.destroy();
+        countTxt.destroy();
+        this.countdownActive = false;
+        this.paused = false;
+        return;
+      }
+
+      const label = steps[step];
+      const isGo = step === steps.length - 1;
+      countTxt.setText(label);
+      countTxt.setFontSize(isGo ? '100px' : '140px');
+      countTxt.setColor(isGo ? '#00ff88' : '#00ffff');
+      countTxt.setScale(1.6);
+      countTxt.setAlpha(1);
+
+      this.tweens.add({
+        targets: countTxt,
+        scaleX: 1, scaleY: 1,
+        duration: 300,
+        ease: 'Back.easeOut',
+      });
+
+      if (isGo) {
+        this.tweens.add({
+          targets: [countTxt, overlay],
+          alpha: 0,
+          delay: 400,
+          duration: 200,
+          onComplete: () => {
+            overlay.destroy();
+            countTxt.destroy();
+            this.countdownActive = false;
+            this.paused = false;
+          },
+        });
+      } else {
+        step++;
+        this.time.delayedCall(800, tick);
+      }
+    };
+
+    tick();
   }
 
   /* --------------------------------------------------------
@@ -945,7 +1015,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private _togglePause() {
-    if (!this.alive) return;
+    if (!this.alive || this.countdownActive) return;
     this.paused = !this.paused;
 
     if (this.paused) {
