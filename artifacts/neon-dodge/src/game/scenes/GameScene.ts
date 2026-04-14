@@ -227,7 +227,7 @@ export class GameScene extends Phaser.Scene {
     this._createScrollingStars();
     this._createGrid();
     this.bgPlanets = [];
-    this.nextPlanetTime = this.time.now + Phaser.Math.Between(2000, 5000);
+    this.nextPlanetTime = this.time.now + Phaser.Math.Between(8000, 15000);
 
     /* Shield glow + iç halka + dış halka (2. kalkan için) */
     this.shieldGlow  = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 38, COLOR_SHIELD, 0).setDepth(8);
@@ -689,11 +689,11 @@ export class GameScene extends Phaser.Scene {
     const wc = this._lerpWallColor();
 
     const leftW = gapX;
-    const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1);
+    const left = this.add.rectangle(leftW / 2, y, leftW, OBSTACLE_THICKNESS, wc, 1).setDepth(3);
 
     const rightW = W - gapX - gapSize;
     const rightX = gapX + gapSize + rightW / 2;
-    const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1);
+    const right = this.add.rectangle(rightX, y, rightW, OBSTACLE_THICKNESS, wc, 1).setDepth(3);
 
     this.obstacles.push(
       { body: left,  isLaser: false, waveId },
@@ -1371,7 +1371,7 @@ export class GameScene extends Phaser.Scene {
     const now = this.time.now;
     if (now >= this.nextPlanetTime) {
       this._spawnBgPlanet();
-      this.nextPlanetTime = now + Phaser.Math.Between(4000, 10000);
+      this.nextPlanetTime = now + Phaser.Math.Between(15000, 30000);
     }
     const t = (this._lerpNum('scrollSpeed') - 260) / (1016 - 260);
     const speedMult = 0.6 + t * 0.8;
@@ -1389,10 +1389,10 @@ export class GameScene extends Phaser.Scene {
     const keys = GameScene.PLANET_KEYS;
     const key = keys[Phaser.Math.Between(0, keys.length - 1)];
     if (!this.textures.exists(key)) return;
-    const scale = 0.15 + Math.random() * 0.45;
-    const x = Phaser.Math.Between(60, GAME_WIDTH - 60);
-    const speed = 30 + Math.random() * 50;
-    const alpha = 0.12 + Math.random() * 0.2;
+    const scale = 0.35 + Math.random() * 0.5;
+    const x = Phaser.Math.Between(80, GAME_WIDTH - 80);
+    const speed = 20 + Math.random() * 35;
+    const alpha = 0.10 + Math.random() * 0.15;
     const img = this.add.image(x, -180, key)
       .setScale(scale)
       .setAlpha(alpha)
