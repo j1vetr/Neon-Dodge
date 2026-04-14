@@ -291,10 +291,10 @@ export class GameScene extends Phaser.Scene {
       stroke: '#885500', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20);
 
-    this.shrinkTimerTxt = this.add.text(W / 2, 130, '', {
-      fontSize: '22px', fontFamily: 'monospace', color: '#ddaa00',
-      stroke: '#665500', strokeThickness: 2,
-    }).setOrigin(0.5).setDepth(20);
+    this.shrinkTimerTxt = this.add.text(0, 0, '', {
+      fontSize: '28px', fontFamily: '"Orbitron", monospace', color: '#ffdd00',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(25).setVisible(false);
 
     /* Level-up banner container */
     this.levelBannerContainer = this.add.container(W / 2, H / 2);
@@ -463,10 +463,15 @@ export class GameScene extends Phaser.Scene {
     this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     playTap();
 
+    const base = this.shrinkActive ? POWERUP_SHRINK_SCALE : 1;
     this.tweens.add({
       targets: this.player,
-      scaleX: 1.25, scaleY: 0.85,
+      scaleX: base * 1.25, scaleY: base * 0.85,
       duration: 65, yoyo: true,
+      onComplete: () => {
+        this.player.scaleX = this.shrinkActive ? POWERUP_SHRINK_SCALE : 1;
+        this.player.scaleY = this.shrinkActive ? POWERUP_SHRINK_SCALE : 1;
+      },
     });
     this.tweens.add({
       targets: this.player,
@@ -731,7 +736,7 @@ export class GameScene extends Phaser.Scene {
     const W = GAME_WIDTH;
     let type: 'shield' | 'double' | 'shrink';
     const roll = Math.random();
-    if (roll < 0.08) {
+    if (roll < 0.12) {
       type = 'shrink';
     } else if (this.shieldCount >= 2) {
       type = 'double';
@@ -1199,9 +1204,11 @@ export class GameScene extends Phaser.Scene {
 
     if (now < this.shrinkUntil) {
       const secs = ((this.shrinkUntil - now) / 1000).toFixed(1);
-      this.shrinkTimerTxt.setText(`🔻 SHRINK ${secs}s`);
+      this.shrinkTimerTxt.setText(secs + 's');
+      this.shrinkTimerTxt.setVisible(true);
+      this.shrinkTimerTxt.setPosition(this.player.x, this.player.y - 50);
     } else {
-      this.shrinkTimerTxt.setText('');
+      this.shrinkTimerTxt.setVisible(false).setText('');
       if (this.shrinkActive) {
         this.shrinkActive = false;
         this.tweens.add({
