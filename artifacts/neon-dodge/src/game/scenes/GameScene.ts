@@ -101,6 +101,7 @@ export class GameScene extends Phaser.Scene {
   /* Background planets */
   private bgPlanets: { img: Phaser.GameObjects.Image; speed: number }[] = [];
   private nextPlanetTime = 0;
+  private lastPlanetKey = '';
 
   /* Score / time */
   private score = 0;
@@ -1385,9 +1386,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private _spawnBgPlanet() {
-    const keys = GameScene.PLANET_KEYS;
+    const keys = GameScene.PLANET_KEYS.filter(k => k !== this.lastPlanetKey);
     const key = keys[Phaser.Math.Between(0, keys.length - 1)];
     if (!this.textures.exists(key)) return;
+    this.lastPlanetKey = key;
     const scale = 0.35 + Math.random() * 0.5;
     const x = Phaser.Math.Between(80, GAME_WIDTH - 80);
     const speed = 80 + Math.random() * 60;
