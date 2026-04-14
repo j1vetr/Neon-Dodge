@@ -5,22 +5,23 @@
    No React UI overlaid — Phaser manages everything.
    ========================================================= */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import type Phaser from 'phaser';
 import { createGame } from './game';
+import SplashScreen, { shouldShowSplash } from './SplashScreen';
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
+  const [showSplash, setShowSplash] = useState(shouldShowSplash);
 
   useEffect(() => {
+    if (showSplash) return;
     if (!containerRef.current || gameRef.current) return;
     gameRef.current = createGame(containerRef.current);
 
     return () => {
       if (gameRef.current) {
-        /* Close AudioContext first so visibility-change events can't fire
-           on an already-destroyed context after HMR remounts. */
         try {
           const ctx = (gameRef.current.sound as any)?.context as AudioContext | undefined;
           if (ctx && ctx.state !== 'closed') ctx.close();
@@ -29,15 +30,18 @@ export default function App() {
         gameRef.current = null;
       }
     };
-  }, []);
+  }, [showSplash]);
+
+  const handleSplashFinish = useCallback(() => setShowSplash(false), []);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
 
   return (
     <div
       ref={containerRef}
       style={{
-        /* 100% — html/body zaten position:fixed ile tam ekran,
-           dvh/svh kullanmıyoruz: viewport resize olunca Phaser
-           ScaleManager tetiklenip canvas kayıyor */
         position: 'fixed',
         top: 0,
         left: 0,
