@@ -16,7 +16,6 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(shouldShowSplash);
 
   useEffect(() => {
-    if (showSplash) return;
     if (!containerRef.current || gameRef.current) return;
     gameRef.current = createGame(containerRef.current);
 
@@ -30,32 +29,31 @@ export default function App() {
         gameRef.current = null;
       }
     };
-  }, [showSplash]);
+  }, []);
 
   const handleSplashFinish = useCallback(() => setShowSplash(false), []);
 
-  if (showSplash) {
-    return <SplashScreen onFinish={handleSplashFinish} />;
-  }
-
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        background: '#050510',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        touchAction: 'none',
-        userSelect: 'none',
-        overscrollBehavior: 'none',
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          background: '#050510',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          touchAction: 'none',
+          userSelect: 'none',
+          overscrollBehavior: 'none',
+        }}
+      />
+      {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
+    </>
   );
 }
