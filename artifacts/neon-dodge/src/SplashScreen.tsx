@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
 
-const SPLASH_SHOWN_KEY = 'neonDodge_splashShown';
 
 export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,7 +17,6 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
     });
 
     anim.addEventListener('complete', () => {
-      sessionStorage.setItem(SPLASH_SHOWN_KEY, '1');
       onFinish();
     });
 
@@ -49,5 +47,5 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
 }
 
 export function shouldShowSplash(): boolean {
-  return sessionStorage.getItem(SPLASH_SHOWN_KEY) !== '1';
+  return true;
 }
