@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
 
 const SPLASH_SHOWN_KEY = 'neonDodge_splashShown';
 
 export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -19,13 +18,8 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
     });
 
     anim.addEventListener('complete', () => {
-      setTimeout(() => {
-        setFadeOut(true);
-        setTimeout(() => {
-          sessionStorage.setItem(SPLASH_SHOWN_KEY, '1');
-          onFinish();
-        }, 500);
-      }, 400);
+      sessionStorage.setItem(SPLASH_SHOWN_KEY, '1');
+      onFinish();
     });
 
     return () => anim.destroy();
@@ -39,13 +33,11 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
         left: 0,
         width: '100%',
         height: '100%',
-        background: '#050510',
+        background: '#ffffff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 99999,
-        opacity: fadeOut ? 0 : 1,
-        transition: 'opacity 0.5s ease-out',
       }}
     >
       <div
