@@ -155,7 +155,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     s.off('connect');  s.off('connect_error');  s.off('disconnect');
     s.off('room-created');  s.off('room-joined');  s.off('room-error');
     s.off('player-joined'); s.off('player-left');
-    s.off('game-starting'); s.off('game-over');    s.off('lobby-reset');
+    s.off('game-starting'); s.off('game-over');    s.off('lobby-reset'); s.off('room-destroyed');
     this.joinCodeDom?.destroy();
     this.nameDomEl?.destroy();
     this.joinCodeInput?.blur();
@@ -234,6 +234,15 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._showPhase('waiting');
       this._renderPlayerList();
       this._setWaitCode(roomState.code);  /* kodu kutulara yeniden yaz */
+    });
+
+    s.on('room-destroyed', () => {
+      roomState.code = '';
+      roomState.myId = '';
+      roomState.players.clear();
+      roomState.results = [];
+      disconnectSocket();
+      this.scene.start('StartScene');
     });
   }
 
@@ -370,8 +379,7 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     /* ── BACK ── */
     c.add(this._backBtn(CX, H - 80, () => {
-      disconnectSocket();
-      this.scene.start('StartScene');
+      this._leaveAndGoHome();
     }));
   }
 
@@ -628,8 +636,7 @@ export class MultiLobbyScene extends Phaser.Scene {
 
     /* Geri butonu */
     c.add(this._backBtn(CX, botY + 210, () => {
-      disconnectSocket();
-      this.scene.start('StartScene');
+      this._leaveAndGoHome();
     }));
   }
 
@@ -694,8 +701,7 @@ export class MultiLobbyScene extends Phaser.Scene {
     }));
 
     c.add(this._backBtn(CX, 1260, () => {
-      disconnectSocket();
-      this.scene.start('StartScene');
+      this._leaveAndGoHome();
     }));
   }
 
@@ -798,6 +804,17 @@ export class MultiLobbyScene extends Phaser.Scene {
       this.startBtnLabel?.setStyle({ color: can ? '#ffffff' : '#4a6a4a' });
       this.startBtn?.setAlpha(can ? 1 : 0.35);
     }
+  }
+
+  private _leaveAndGoHome() {
+    roomState.code = '';
+    roomState.myId = '';
+    roomState.players.clear();
+    roomState.results = [];
+    const s = getSocket();
+    if (s.connected) s.emit('leave-room');
+    disconnectSocket();
+    this.scene.start('StartScene');
   }
 
   private _showPhase(ph: 'entry' | 'waiting' | 'results') {

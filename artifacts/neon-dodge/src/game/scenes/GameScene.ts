@@ -22,7 +22,7 @@ import {
 } from '../constants';
 import { t } from '../i18n';
 import {
-  getSocket, sendPosThrottled, roomState, colorHex,
+  getSocket, disconnectSocket, sendPosThrottled, roomState, colorHex,
 } from '../multiState';
 import {
   playTap, playHit, playScore,
@@ -1451,6 +1451,17 @@ export class GameScene extends Phaser.Scene {
       if (entry) { entry.dot.destroy(); entry.label.destroy(); }
       this.multiDots.delete(id);
     });
+
+    /* Host çıktı — oda yok edildi */
+    s.on('room-destroyed', () => {
+      stopAmbient();
+      roomState.code = '';
+      roomState.myId = '';
+      roomState.players.clear();
+      roomState.results = [];
+      disconnectSocket();
+      this.scene.start('StartScene');
+    });
   }
 
   private _showMultiWaitOverlay() {
@@ -1479,6 +1490,7 @@ export class GameScene extends Phaser.Scene {
     s.off('player-pos');
     s.off('player-died');
     s.off('game-over');
+    s.off('room-destroyed');
     /* 2. oyun için eski dot referanslarını temizle */
     this.multiDots.clear();
     s.off('player-left');

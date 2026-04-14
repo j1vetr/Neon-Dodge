@@ -137,22 +137,64 @@ export function registerSocketHandlers(io: Server) {
       });
     });
 
-    /* ── Bağlantı kesildi ── */
-    socket.on('disconnect', () => {
-      logger.info({ id: socket.id }, 'socket disconnected');
+    /* ── Odadan ayrıl (açıkça) ── */
+    socket.on('leave-room', () => {
       const room = findRoomBySocketId(socket.id);
       if (!room) return;
+      const player = room.players.get(socket.id);
+      const wasHost = player?.isHost ?? false;
       removePlayerFromRoom(room, socket.id);
-      io.to(room.code).emit('player-left', { id: socket.id });
+      socket.leave(room.code);
+      logger.info({ id: socket.id, code: room.code, wasHost }, 'player left room');
 
       if (room.players.size === 0) {
         deleteRoom(room.code);
         return;
       }
-      /* Oyun sırasında herkes öldüyse kontrol et */
-      if (room.state === 'playing') {
-        const alive = [...room.players.values()].filter(p => p.alive);
-        if (alive.length === 0) _finishGame(io, room);
+
+      if (wasHost) {
+        io.to(room.code).emit('room-destroyed', { reason: 'host-left' });
+        for (const pid of room.players.keys()) {
+          const s = io.sockets.sockets.get(pid);
+          if (s) s.leave(room.code);
+        }
+        deleteRoom(room.code);
+      } else {
+        io.to(room.code).emit('player-left', { id: socket.id });
+        if (room.state === 'playing') {
+          const alive = [...room.players.values()].filter(p => p.alive);
+          if (alive.length === 0) _finishGame(io, room);
+        }
+      }
+    });
+
+    /* ── Bağlantı kesildi ── */
+    socket.on('disconnect', () => {
+      logger.info({ id: socket.id }, 'socket disconnected');
+      const room = findRoomBySocketId(socket.id);
+      if (!room) return;
+      const player = room.players.get(socket.id);
+      const wasHost = player?.isHost ?? false;
+      removePlayerFromRoom(room, socket.id);
+
+      if (room.players.size === 0) {
+        deleteRoom(room.code);
+        return;
+      }
+
+      if (wasHost) {
+        io.to(room.code).emit('room-destroyed', { reason: 'host-left' });
+        for (const pid of room.players.keys()) {
+          const s = io.sockets.sockets.get(pid);
+          if (s) s.leave(room.code);
+        }
+        deleteRoom(room.code);
+      } else {
+        io.to(room.code).emit('player-left', { id: socket.id });
+        if (room.state === 'playing') {
+          const alive = [...room.players.values()].filter(p => p.alive);
+          if (alive.length === 0) _finishGame(io, room);
+        }
       }
     });
   });
