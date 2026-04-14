@@ -98,6 +98,10 @@ export class GameScene extends Phaser.Scene {
   private stars: Phaser.GameObjects.Arc[] = [];
   private starSpeeds: number[] = [];
 
+  /* Background planets */
+  private bgPlanets: { img: Phaser.GameObjects.Image; speed: number }[] = [];
+  private nextPlanetTime = 0;
+
   /* Score / time */
   private score = 0;
   private scoreDisplay = 0;
@@ -222,6 +226,8 @@ export class GameScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
     this._createScrollingStars();
     this._createGrid();
+    this.bgPlanets = [];
+    this.nextPlanetTime = this.time.now + Phaser.Math.Between(2000, 5000);
 
     /* Shield glow + iç halka + dış halka (2. kalkan için) */
     this.shieldGlow  = this.add.circle(PLAYER_START_X, PLAYER_START_Y, PLAYER_SIZE + 38, COLOR_SHIELD, 0).setDepth(8);
@@ -522,6 +528,7 @@ export class GameScene extends Phaser.Scene {
 
     /* Scrolling stars */
     this._updateScrollingStars(dt);
+    this._updateBgPlanets(dt);
 
     /* Spawn obstacles */
     this.spawnTimer += delta;
@@ -1353,6 +1360,44 @@ export class GameScene extends Phaser.Scene {
         this.stars[i].x = Phaser.Math.Between(0, GAME_WIDTH);
       }
     }
+  }
+
+  private static readonly PLANET_KEYS = [
+    'planet-1','planet-2','planet-3','planet-4','planet-5',
+    'planet-6','planet-7','planet-8','planet-9','planet-10',
+  ];
+
+  private _updateBgPlanets(dt: number) {
+    const now = this.time.now;
+    if (now >= this.nextPlanetTime) {
+      this._spawnBgPlanet();
+      this.nextPlanetTime = now + Phaser.Math.Between(4000, 10000);
+    }
+    const t = (this._lerpNum('scrollSpeed') - 260) / (1016 - 260);
+    const speedMult = 0.6 + t * 0.8;
+    for (let i = this.bgPlanets.length - 1; i >= 0; i--) {
+      const p = this.bgPlanets[i];
+      p.img.y += p.speed * speedMult * dt;
+      if (p.img.y > GAME_HEIGHT + 200) {
+        p.img.destroy();
+        this.bgPlanets.splice(i, 1);
+      }
+    }
+  }
+
+  private _spawnBgPlanet() {
+    const keys = GameScene.PLANET_KEYS;
+    const key = keys[Phaser.Math.Between(0, keys.length - 1)];
+    if (!this.textures.exists(key)) return;
+    const scale = 0.15 + Math.random() * 0.45;
+    const x = Phaser.Math.Between(60, GAME_WIDTH - 60);
+    const speed = 30 + Math.random() * 50;
+    const alpha = 0.12 + Math.random() * 0.2;
+    const img = this.add.image(x, -180, key)
+      .setScale(scale)
+      .setAlpha(alpha)
+      .setDepth(1);
+    this.bgPlanets.push({ img, speed });
   }
 
   private _createGrid() {
