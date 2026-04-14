@@ -225,7 +225,6 @@ export class GameScene extends Phaser.Scene {
     /* Background */
     this.add.rectangle(W / 2, H / 2, W, H, COLOR_BG);
     this._createScrollingStars();
-    this._createGrid();
     this.bgPlanets = [];
     this.nextPlanetTime = this.time.now + Phaser.Math.Between(8000, 15000);
 
