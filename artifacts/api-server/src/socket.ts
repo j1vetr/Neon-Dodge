@@ -63,10 +63,20 @@ export function registerSocketHandlers(io: Server) {
     /* ── Oyunu başlat (sadece host) ── */
     socket.on('start-game', () => {
       const room = findRoomBySocketId(socket.id);
-      if (!room) return;
+      if (!room) {
+        logger.warn({ id: socket.id }, 'start-game: room not found');
+        return;
+      }
       const player = room.players.get(socket.id);
-      if (!player?.isHost) return;
-      if (room.players.size < 1) return;
+      if (!player?.isHost) {
+        logger.warn({ id: socket.id, isHost: player?.isHost }, 'start-game: not host');
+        return;
+      }
+      if (room.players.size < 1) {
+        logger.warn({ id: socket.id }, 'start-game: no players');
+        return;
+      }
+      logger.info({ id: socket.id, code: room.code, playerCount: room.players.size }, 'start-game: starting');
       room.state = 'playing';
       for (const p of room.players.values()) {
         p.alive = true;
