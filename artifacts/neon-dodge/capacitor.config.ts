@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Neon Dodge',
   webDir: 'dist/public',
   server: {
-    url: 'https://neon.toov.com.tr',
-    cleartext: false,
+    androidScheme: 'https',
   },
   android: {
     buildOptions: {

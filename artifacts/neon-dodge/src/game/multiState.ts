@@ -3,6 +3,7 @@
    ========================================================= */
 
 import { io, Socket } from 'socket.io-client';
+import { Capacitor } from '@capacitor/core';
 
 export interface NetPlayer {
   id: string;
@@ -26,8 +27,10 @@ export interface GameResult {
   rank: number;
 }
 
-/* Sunucu URL — aynı origin, /api-server prefix üzerinden */
+const PROD_SERVER = 'https://neon.toov.com.tr';
+
 function getSocketUrl(): string {
+  if (Capacitor.isNativePlatform()) return PROD_SERVER;
   return window.location.origin;
 }
 
