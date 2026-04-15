@@ -30,6 +30,7 @@ import {
   playCombo, playNearMiss, playPowerUp, playShieldHit,
   startAmbient, updateAmbientLevel, stopAmbient,
   initSound, setSoundEnabled, isSoundEnabled,
+  startBgm, stopBgm,
 } from '../audio';
 import { hapticTap, hapticCollect, hapticDeath, hapticShieldBreak } from '../native';
 
@@ -367,6 +368,7 @@ export class GameScene extends Phaser.Scene {
 
     this._updateLevelLabel();
     startAmbient(this.reviveData.active ? this.currentLevel : 0);
+    startBgm();
 
     /* Multiplayer başlatma */
     if (this.multiMode) {
@@ -1261,6 +1263,7 @@ export class GameScene extends Phaser.Scene {
   private _onDeath() {
     this.alive = false;
     stopAmbient();
+    stopBgm();
     hapticDeath();
 
     this.combo = 0;

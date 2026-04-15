@@ -5,19 +5,35 @@
    No external assets required.
    ========================================================= */
 
-import { STORAGE_SOUND } from './constants';
+import { STORAGE_SOUND, STORAGE_MUSIC } from './constants';
 
 let ctx: AudioContext | null = null;
 let soundEnabled = true;
+let musicEnabled = true;
 
 export function initSound() {
   soundEnabled = localStorage.getItem(STORAGE_SOUND) !== 'off';
+  musicEnabled = localStorage.getItem(STORAGE_MUSIC) !== 'off';
 }
 
 export function setSoundEnabled(on: boolean) {
   soundEnabled = on;
   localStorage.setItem(STORAGE_SOUND, on ? 'on' : 'off');
   if (!on) stopAmbient();
+}
+
+export function setMusicEnabled(on: boolean) {
+  musicEnabled = on;
+  localStorage.setItem(STORAGE_MUSIC, on ? 'on' : 'off');
+  if (on) {
+    resumeBgm();
+  } else {
+    pauseBgm();
+  }
+}
+
+export function isMusicEnabled(): boolean {
+  return musicEnabled;
 }
 
 export function isSoundEnabled(): boolean {
@@ -199,4 +215,46 @@ export function stopAmbient() {
     clearTimeout(ambientHandle);
     ambientHandle = null;
   }
+}
+
+/* -------------------------------------------------------
+   BACKGROUND MUSIC (BGM)
+   Plays the loaded mp3 file in a loop at low volume.
+   ------------------------------------------------------- */
+let bgmAudio: HTMLAudioElement | null = null;
+let bgmStarted = false;
+const BGM_VOLUME = 0.13;
+
+export function startBgm() {
+  if (!musicEnabled) return;
+  if (!bgmAudio) {
+    bgmAudio = new Audio();
+    bgmAudio.src = (import.meta.env.BASE_URL ?? '/') + 'assets/bgm.mp3';
+    bgmAudio.loop = true;
+    bgmAudio.volume = BGM_VOLUME;
+    bgmAudio.preload = 'auto';
+  }
+  bgmAudio.currentTime = 0;
+  bgmAudio.volume = BGM_VOLUME;
+  bgmAudio.play().catch(() => {});
+  bgmStarted = true;
+}
+
+export function pauseBgm() {
+  if (bgmAudio && bgmStarted) {
+    bgmAudio.pause();
+  }
+}
+
+export function resumeBgm() {
+  if (!musicEnabled || !bgmStarted || !bgmAudio) return;
+  bgmAudio.play().catch(() => {});
+}
+
+export function stopBgm() {
+  if (bgmAudio) {
+    bgmAudio.pause();
+    bgmAudio.currentTime = 0;
+  }
+  bgmStarted = false;
 }

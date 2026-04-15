@@ -162,3 +162,4 @@ export const COLOR_SHRINK            = 0xddaa00;
 
 /* Sound */
 export const STORAGE_SOUND = 'neonDodge_sound';
+export const STORAGE_MUSIC = 'neonDodge_music';

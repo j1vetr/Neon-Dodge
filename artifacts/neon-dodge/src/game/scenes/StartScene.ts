@@ -6,10 +6,10 @@
 import Phaser from 'phaser';
 import {
   GAME_WIDTH, GAME_HEIGHT, COLOR_BG, SKINS,
-  STORAGE_HIGHSCORE, STORAGE_SKIN, STORAGE_SOUND,
+  STORAGE_HIGHSCORE, STORAGE_SKIN, STORAGE_SOUND, STORAGE_MUSIC,
 } from '../constants';
 import { getLang, setLang, t } from '../i18n';
-import { setSoundEnabled } from '../audio';
+import { setSoundEnabled, setMusicEnabled, isMusicEnabled } from '../audio';
 
 /* ── Module-level helper ────────────────────────────────── */
 function _diamond(
@@ -652,7 +652,7 @@ export class StartScene extends Phaser.Scene {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const CX = W / 2;
     const py  = H * 0.494;
-    const PW  = 568, PH = 584;
+    const PW  = 568, PH = 760;
     const D   = 90;
 
     const push = <T extends Phaser.GameObjects.GameObject & { setVisible(v: boolean): unknown }>(o: T) => {
@@ -771,15 +771,66 @@ export class StartScene extends Phaser.Scene {
     iconOn .on('pointerdown', () => applySound(true));
     iconOff.on('pointerdown', () => applySound(false));
 
+    /* ── Rule 2b ── */
+    const rule2b = this.add.graphics().setDepth(D);
+    rule2b.lineStyle(2, 0x00ffff, 0.1);
+    rule2b.lineBetween(CX - PW/2 + 36, py - PH/2 + 476, CX + PW/2 - 36, py - PH/2 + 476);
+    push(rule2b);
+
+    /* ── Music section ── */
+    push(this.add.text(CX, py - PH/2 + 508, t().music, {
+      fontSize: '18px', fontFamily: 'monospace', color: '#2d4455', letterSpacing: 4,
+    }).setOrigin(0.5).setDepth(D));
+
+    const musicOn  = isMusicEnabled();
+    const musicY   = py - PH/2 + 580;
+
+    const mRingOn  = push(this.add.circle(onX, musicY, ICO / 2 + 8, 0x000000, 0)
+      .setStrokeStyle(musicOn ? 4 : 0, 0x00ffcc, 1).setDepth(D));
+    const mRingOff = push(this.add.circle(offX, musicY, ICO / 2 + 8, 0x000000, 0)
+      .setStrokeStyle(!musicOn ? 4 : 0, 0xff4477, 1).setDepth(D));
+
+    const mIconOn = push(this.add.text(onX, musicY, '♫', {
+      fontSize: '40px', color: musicOn ? '#00ffcc' : '#334455',
+    }).setOrigin(0.5).setAlpha(musicOn ? 1 : 0.28)
+      .setInteractive({ useHandCursor: true }).setDepth(D));
+
+    const mIconOff = push(this.add.text(offX, musicY, '♫', {
+      fontSize: '40px', color: !musicOn ? '#ff4477' : '#334455',
+    }).setOrigin(0.5).setAlpha(!musicOn ? 1 : 0.28)
+      .setInteractive({ useHandCursor: true }).setDepth(D));
+
+    const offLineBg = push(this.add.graphics().setDepth(D));
+    const drawOffLine = (on: boolean) => {
+      offLineBg.clear();
+      if (!on) {
+        offLineBg.lineStyle(3, 0xff4477, 0.8);
+        offLineBg.lineBetween(offX - 14, musicY - 14, offX + 14, musicY + 14);
+      }
+    };
+    drawOffLine(musicOn);
+
+    const applyMusic = (on: boolean) => {
+      setMusicEnabled(on);
+      mIconOn .setStyle({ color: on ? '#00ffcc' : '#334455' }).setAlpha(on ? 1 : 0.28);
+      mIconOff.setStyle({ color: !on ? '#ff4477' : '#334455' }).setAlpha(!on ? 1 : 0.28);
+      (mRingOn  as Phaser.GameObjects.Arc).setStrokeStyle(on  ? 4 : 0, 0x00ffcc, 1);
+      (mRingOff as Phaser.GameObjects.Arc).setStrokeStyle(!on ? 4 : 0, 0xff4477, 1);
+      drawOffLine(on);
+    };
+
+    mIconOn .on('pointerdown', () => applyMusic(true));
+    mIconOff.on('pointerdown', () => applyMusic(false));
+
     /* ── Rule 3 ── */
     const rule3 = this.add.graphics().setDepth(D);
     rule3.lineStyle(2, 0x00ffff, 0.1);
-    rule3.lineBetween(CX - PW/2 + 36, py - PH/2 + 476, CX + PW/2 - 36, py - PH/2 + 476);
+    rule3.lineBetween(CX - PW/2 + 36, py - PH/2 + 640, CX + PW/2 - 36, py - PH/2 + 640);
     push(rule3);
 
     /* ── Close button ── */
     const closeBg = push(this.add.graphics().setDepth(D));
-    const closeY  = py - PH/2 + 520;
+    const closeY  = py - PH/2 + 690;
     const drawClose = (hover: boolean) => {
       closeBg.clear();
       closeBg.lineStyle(3, 0xff4477, hover ? 1 : 0.7);
