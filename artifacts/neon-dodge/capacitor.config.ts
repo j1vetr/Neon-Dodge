@@ -33,6 +33,10 @@ const config: CapacitorConfig = {
       splashImmersive: true,
       launchFadeOutDuration: 300,
     },
+    Keyboard: {
+      resize: 'none',
+      style: 'DARK',
+    },
     KeepAwake: {},
     Haptics: {},
   },

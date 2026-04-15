@@ -149,6 +149,63 @@ export class MultiLobbyScene extends Phaser.Scene {
     this._showPhase(this.phase);
     if (this.phase === 'results' && this.incomingResults) this._renderResults(this.incomingResults);
     if (this.phase === 'waiting') this._renderPlayerList();
+
+    this._setupKeyboardScroll();
+  }
+
+  private _kbShowHandler: any = null;
+  private _kbHideHandler: any = null;
+  private _kbScrollY = 0;
+
+  private _setupKeyboardScroll() {
+    import('@capacitor/core').then(({ Capacitor }) => {
+      if (!Capacitor.isNativePlatform()) {
+        this._setupWebKeyboardScroll();
+        return;
+      }
+      import('@capacitor/keyboard').then(({ Keyboard }) => {
+        this._kbShowHandler = (info: any) => {
+          const kbH = info.keyboardHeight || 0;
+          const scaleY = H / window.innerHeight;
+          this._kbScrollY = kbH * scaleY * 0.5;
+          this._panScene(-this._kbScrollY);
+        };
+        this._kbHideHandler = () => {
+          this._panScene(0);
+          this._kbScrollY = 0;
+        };
+        Keyboard.addListener('keyboardWillShow', this._kbShowHandler);
+        Keyboard.addListener('keyboardWillHide', this._kbHideHandler);
+      }).catch(() => this._setupWebKeyboardScroll());
+    });
+  }
+
+  private _setupWebKeyboardScroll() {
+    if (!window.visualViewport) return;
+    const vv = window.visualViewport!;
+    const onResize = () => {
+      const kbH = window.innerHeight - vv.height;
+      if (kbH > 100) {
+        const scaleY = H / window.innerHeight;
+        this._kbScrollY = kbH * scaleY * 0.45;
+        this._panScene(-this._kbScrollY);
+      } else {
+        this._panScene(0);
+        this._kbScrollY = 0;
+      }
+    };
+    vv.addEventListener('resize', onResize);
+    this.events.once('shutdown', () => vv.removeEventListener('resize', onResize));
+  }
+
+  private _panScene(y: number) {
+    const targets = [this.entryContainer, this.joinModal].filter(Boolean);
+    this.tweens.add({
+      targets,
+      y,
+      duration: 180,
+      ease: 'Sine.easeOut',
+    });
   }
 
   shutdown() {
@@ -161,6 +218,14 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.nameDomEl?.destroy();
     this.joinCodeInput?.blur();
     this.nameActive = false;
+
+    import('@capacitor/core').then(({ Capacitor }) => {
+      if (Capacitor.isNativePlatform()) {
+        import('@capacitor/keyboard').then(({ Keyboard }) => {
+          Keyboard.removeAllListeners();
+        }).catch(() => {});
+      }
+    });
   }
 
   /* ==============================================================
