@@ -82,7 +82,6 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@capacitor-community/admob": "^8.0.0",
     "@capacitor-community/keep-awake": "^8.0.0",
     "@capacitor/android": "^8.3.0",
     "@capacitor/core": "^8.3.0",

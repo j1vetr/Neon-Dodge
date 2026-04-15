@@ -7,15 +7,17 @@ let onAdDismissed: (() => void) | null = null;
 let AdMobModule: any = null;
 let RewardEvents: any = null;
 
-async function loadPlugin() {
+const ADMOB_PKG = '@capacitor-community/admob';
+
+async function loadPlugin(): Promise<boolean> {
   try {
     const cap = await import('@capacitor/core');
     if (!cap.Capacitor.isNativePlatform()) return false;
-    const mod = await import('@capacitor-community/admob');
+    const mod = await import(/* @vite-ignore */ ADMOB_PKG);
     AdMobModule = mod.AdMob;
     RewardEvents = mod.RewardAdPluginEvents;
     return true;
-  } catch (_e) {
+  } catch {
     return false;
   }
 }
@@ -30,7 +32,7 @@ export async function initAdMob(): Promise<void> {
     await AdMobModule.initialize({
       initializeForTesting: false,
     });
-  } catch (_e) {
+  } catch {
     return;
   }
 
@@ -60,7 +62,7 @@ export async function initAdMob(): Promise<void> {
       onAdDismissed?.();
       onAdDismissed = null;
     });
-  } catch (_e) {
+  } catch {
     return;
   }
 
@@ -75,7 +77,7 @@ export async function prepareRewarded(): Promise<void> {
       adId: REWARDED_ID,
       isTesting: false,
     });
-  } catch (_e) {
+  } catch {
     rewardedLoaded = false;
   }
 }
@@ -98,7 +100,7 @@ export async function showRewarded(
   try {
     await AdMobModule.showRewardVideoAd();
     return true;
-  } catch (_e) {
+  } catch {
     rewardedLoaded = false;
     return false;
   }
@@ -112,7 +114,7 @@ export function isNativePlatform(): boolean {
   try {
     const cap = (globalThis as any)?.Capacitor;
     return cap?.isNativePlatform?.() ?? false;
-  } catch (_e) {
+  } catch {
     return false;
   }
 }
