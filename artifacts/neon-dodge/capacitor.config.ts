@@ -33,9 +33,6 @@ const config: CapacitorConfig = {
     },
     KeepAwake: {},
     Haptics: {},
-    AdMob: {
-      appIdAndroid: 'ca-app-pub-6688478170415368~1631040813',
-    },
   },
 };
 

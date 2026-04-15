@@ -10,7 +10,6 @@ import {
   STORAGE_HIGHSCORE,
 } from '../constants';
 import { t } from '../i18n';
-import { showRewarded, isNativePlatform } from '../admob';
 
 export class GameOverScene extends Phaser.Scene {
   private score = 0;
@@ -205,56 +204,7 @@ export class GameOverScene extends Phaser.Scene {
     for (let y = 0; y <= GAME_HEIGHT; y += 80) g.lineBetween(0, y, GAME_WIDTH, y);
   }
 
-  private _revivePlayer() {
-    this.scene.start('GameScene', {
-      skin:        this.skinIndex,
-      revive:      true,
-      score:       this.score,
-      level:       this.levelReached - 1,
-      elapsedTime: this.elapsedTime,
-      maxCombo:    this.maxCombo,
-    });
-  }
-
   private _showAdPlaceholder() {
-    if (isNativePlatform()) {
-      this._showNativeAd();
-    } else {
-      this._showFallbackAd();
-    }
-  }
-
-  private _showNativeAd() {
-    const W = GAME_WIDTH, H = GAME_HEIGHT;
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.94).setDepth(100);
-    const loadingTxt = this.add.text(W / 2, H / 2, '⏳', {
-      fontSize: '48px',
-    }).setOrigin(0.5).setDepth(101);
-
-    this.tweens.add({
-      targets: loadingTxt, alpha: 0.3, duration: 600, yoyo: true, repeat: -1,
-    });
-
-    showRewarded(
-      () => {
-        overlay.destroy();
-        loadingTxt.destroy();
-        this._revivePlayer();
-      },
-      () => {
-        overlay.destroy();
-        loadingTxt.destroy();
-      },
-    ).then(shown => {
-      if (!shown) {
-        overlay.destroy();
-        loadingTxt.destroy();
-        this._showFallbackAd();
-      }
-    });
-  }
-
-  private _showFallbackAd() {
     const W = GAME_WIDTH, H = GAME_HEIGHT;
     const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.94).setDepth(100);
     this.add.rectangle(W / 2, H / 2, W * 0.82, H * 0.38, 0x0a0a18, 1)
@@ -288,7 +238,15 @@ export class GameOverScene extends Phaser.Scene {
         this.children.list
           .filter(c => ((c as { depth?: number }).depth ?? 0) >= 100)
           .forEach(c => c.destroy());
-        this._revivePlayer();
+        /* Kaldığı yerden devam: mevcut score, level, elapsedTime'ı geri ver + kalkan */
+        this.scene.start('GameScene', {
+          skin:        this.skinIndex,
+          revive:      true,
+          score:       this.score,
+          level:       this.levelReached - 1,   /* 0-tabanlı level index */
+          elapsedTime: this.elapsedTime,
+          maxCombo:    this.maxCombo,
+        });
       });
     });
   }

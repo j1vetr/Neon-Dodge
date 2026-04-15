@@ -13,10 +13,8 @@ import { GameScene } from './scenes/GameScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { MultiLobbyScene } from './scenes/MultiLobbyScene';
 import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG } from './constants';
-import { initAdMob } from './admob';
 
 export function createGame(parent: HTMLElement): Phaser.Game {
-  setTimeout(() => { initAdMob().catch(() => {}); }, 3000);
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
