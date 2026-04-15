@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type Phaser from 'phaser';
 import { createGame } from './game';
 import SplashScreen, { shouldShowSplash } from './SplashScreen';
+import { initAdMob } from './game/admob';
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -18,6 +19,7 @@ export default function App() {
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
     gameRef.current = createGame(containerRef.current);
+    initAdMob().catch(() => {});
 
     return () => {
       if (gameRef.current) {
