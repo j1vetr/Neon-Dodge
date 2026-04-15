@@ -87,6 +87,7 @@
     "@capacitor/core": "^8.3.0",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/screen-orientation": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "lottie-web": "^5.13.0",
     "phaser": "^3.90.0",

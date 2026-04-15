@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import lottie from 'lottie-web';
+import { hideSplash } from './game/native';
 
 
 export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
@@ -7,6 +8,8 @@ export default function SplashScreen({ onFinish }: { onFinish: () => void }) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    hideSplash();
 
     const anim = lottie.loadAnimation({
       container: containerRef.current,
