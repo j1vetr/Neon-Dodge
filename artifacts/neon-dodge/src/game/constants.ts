@@ -1,10 +1,13 @@
 
 /* =========================================================
-   GAME CONSTANTS  —  800 × 1400  (2× HD resolution)
+   GAME CONSTANTS  —  800 × dynamic  (adapts to device ratio)
    ========================================================= */
 
 export const GAME_WIDTH  = 800;
-export const GAME_HEIGHT = 1400;
+const _ratio = typeof window !== 'undefined'
+  ? window.innerHeight / window.innerWidth
+  : 1.75;
+export const GAME_HEIGHT = Math.max(1400, Math.round(GAME_WIDTH * _ratio));
 
 /* Player */
 export const PLAYER_SIZE              = 26;
