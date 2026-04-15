@@ -16,7 +16,7 @@ import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG } from './constants';
 import { initAdMob } from './admob';
 
 export function createGame(parent: HTMLElement): Phaser.Game {
-  initAdMob().catch(() => {});
+  setTimeout(() => { initAdMob().catch(() => {}); }, 3000);
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,

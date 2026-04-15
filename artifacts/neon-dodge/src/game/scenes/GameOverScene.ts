@@ -10,7 +10,7 @@ import {
   STORAGE_HIGHSCORE,
 } from '../constants';
 import { t } from '../i18n';
-import { showRewarded, isRewardedReady, isNativePlatform } from '../admob';
+import { showRewarded, isNativePlatform } from '../admob';
 
 export class GameOverScene extends Phaser.Scene {
   private score = 0;

@@ -1,65 +1,80 @@
-import { Capacitor } from '@capacitor/core';
-import {
-  AdMob,
-  RewardAdOptions,
-  AdLoadInfo,
-  RewardAdPluginEvents,
-  AdMobRewardItem,
-} from '@capacitor-community/admob';
-
 const REWARDED_ID = 'ca-app-pub-6688478170415368/4504616167';
 
 let initialized = false;
 let rewardedLoaded = false;
 let onRewardEarned: (() => void) | null = null;
 let onAdDismissed: (() => void) | null = null;
+let AdMobModule: any = null;
+let RewardEvents: any = null;
+
+async function loadPlugin() {
+  try {
+    const cap = await import('@capacitor/core');
+    if (!cap.Capacitor.isNativePlatform()) return false;
+    const mod = await import('@capacitor-community/admob');
+    AdMobModule = mod.AdMob;
+    RewardEvents = mod.RewardAdPluginEvents;
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
 
 export async function initAdMob(): Promise<void> {
   if (initialized) return;
-  if (!Capacitor.isNativePlatform()) return;
 
-  await AdMob.initialize({
-    initializeForTesting: false,
-  });
+  const loaded = await loadPlugin();
+  if (!loaded || !AdMobModule) return;
 
-  AdMob.addListener(RewardAdPluginEvents.Loaded, (_info: AdLoadInfo) => {
-    rewardedLoaded = true;
-  });
+  try {
+    await AdMobModule.initialize({
+      initializeForTesting: false,
+    });
+  } catch (_e) {
+    return;
+  }
 
-  AdMob.addListener(RewardAdPluginEvents.Rewarded, (_reward: AdMobRewardItem) => {
-    onRewardEarned?.();
-    onRewardEarned = null;
-  });
+  try {
+    AdMobModule.addListener(RewardEvents.Loaded, () => {
+      rewardedLoaded = true;
+    });
 
-  AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
-    rewardedLoaded = false;
-    onAdDismissed?.();
-    onAdDismissed = null;
-    prepareRewarded();
-  });
+    AdMobModule.addListener(RewardEvents.Rewarded, () => {
+      onRewardEarned?.();
+      onRewardEarned = null;
+    });
 
-  AdMob.addListener(RewardAdPluginEvents.FailedToLoad, () => {
-    rewardedLoaded = false;
-  });
+    AdMobModule.addListener(RewardEvents.Dismissed, () => {
+      rewardedLoaded = false;
+      onAdDismissed?.();
+      onAdDismissed = null;
+      prepareRewarded();
+    });
 
-  AdMob.addListener(RewardAdPluginEvents.FailedToShow, () => {
-    rewardedLoaded = false;
-    onAdDismissed?.();
-    onAdDismissed = null;
-  });
+    AdMobModule.addListener(RewardEvents.FailedToLoad, () => {
+      rewardedLoaded = false;
+    });
+
+    AdMobModule.addListener(RewardEvents.FailedToShow, () => {
+      rewardedLoaded = false;
+      onAdDismissed?.();
+      onAdDismissed = null;
+    });
+  } catch (_e) {
+    return;
+  }
 
   initialized = true;
   await prepareRewarded();
 }
 
 export async function prepareRewarded(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!AdMobModule) return;
   try {
-    const options: RewardAdOptions = {
+    await AdMobModule.prepareRewardVideoAd({
       adId: REWARDED_ID,
       isTesting: false,
-    };
-    await AdMob.prepareRewardVideoAd(options);
+    });
   } catch (_e) {
     rewardedLoaded = false;
   }
@@ -69,9 +84,7 @@ export async function showRewarded(
   onReward: () => void,
   onDismiss?: () => void,
 ): Promise<boolean> {
-  if (!Capacitor.isNativePlatform()) {
-    return false;
-  }
+  if (!AdMobModule) return false;
 
   if (!rewardedLoaded) {
     await prepareRewarded();
@@ -83,7 +96,7 @@ export async function showRewarded(
   onAdDismissed = onDismiss ?? null;
 
   try {
-    await AdMob.showRewardVideoAd();
+    await AdMobModule.showRewardVideoAd();
     return true;
   } catch (_e) {
     rewardedLoaded = false;
@@ -96,5 +109,10 @@ export function isRewardedReady(): boolean {
 }
 
 export function isNativePlatform(): boolean {
-  return Capacitor.isNativePlatform();
+  try {
+    const cap = (globalThis as any)?.Capacitor;
+    return cap?.isNativePlatform?.() ?? false;
+  } catch (_e) {
+    return false;
+  }
 }
