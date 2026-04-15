@@ -45,11 +45,21 @@ body {
 
 canvas {
   display: block;
-  /* Canvas elementinin kendisinde de touch-action zorunlu —
-     sadece body'de olması Phaser canvas'ını kapsamıyor */
   touch-action: none;
   image-rendering: auto;
-  /* Seçim/highlight engeli */
   -webkit-user-select: none;
   user-select: none;
+}
+
+input, textarea {
+  position: fixed !important;
+  top: 0 !important;
+  left: -9999px !important;
+  opacity: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }

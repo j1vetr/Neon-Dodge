@@ -361,16 +361,23 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(this.nameHitBox);
 
     /* ── AD DOM INPUT — mobilde klavye açmak için ── */
-    this.nameDomEl = this.add.dom(CX, 308, 'input', `
-      width:${W - 156}px; height:72px;
+    this.nameDomEl = this.add.dom(CX, 0, 'input', `
+      position:fixed; top:0; left:-9999px;
+      width:1px; height:1px;
       background:transparent; border:none; outline:none;
       color:transparent; caret-color:transparent;
-      font-size:1px; pointer-events:none; opacity:0; cursor:text;
+      font-size:16px; opacity:0;
     `).setDepth(30);
     const ni = this.nameDomEl.node as HTMLInputElement;
     ni.maxLength = 8;
     ni.autocomplete = 'off';
+    ni.setAttribute('inputmode', 'text');
     (ni as any).spellcheck = false;
+    ni.addEventListener('focus', () => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    });
     ni.addEventListener('input', () => {
       const v = ni.value.toUpperCase().replace(/[^A-Z0-9ÇĞİÖŞÜ ]/g, '').slice(0, 8);
       ni.value = v;
@@ -379,17 +386,22 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._updateCounter();
       this._drawNameBorder(0xff8800, 0.45);
       this.errorTxt?.setAlpha(0);
+      window.scrollTo(0, 0);
     });
     ni.addEventListener('focus', () => {
       this.nameActive = true;
       this._drawNameBorder(0xff8800, 0.9);
       this._renderNameTxt();
+      setTimeout(() => { window.scrollTo(0, 0); }, 50);
+      setTimeout(() => { window.scrollTo(0, 0); }, 150);
+      setTimeout(() => { window.scrollTo(0, 0); }, 300);
     });
     ni.addEventListener('blur', () => {
       this.nameActive = false;
       this.cursorOn = false;
       this._drawNameBorder(0xff8800, 0.5);
       this._renderNameTxt();
+      window.scrollTo(0, 0);
     });
     ni.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter') { ni.blur(); this._doCreate(); }
@@ -510,21 +522,29 @@ export class MultiLobbyScene extends Phaser.Scene {
     c.add(codeHit);
 
     /* ── DOM input (görünmez, klavye için) ── */
-    this.joinCodeDom = this.add.dom(CX, BOX_Y, 'input', `
-      width:${boxTotalW + 20}px; height:${boxH + 10}px;
+    this.joinCodeDom = this.add.dom(CX, 0, 'input', `
+      position:fixed; top:0; left:-9999px;
+      width:1px; height:1px;
       background:transparent; border:none; outline:none;
       color:transparent; caret-color:transparent;
-      font-size:1px; letter-spacing:0; pointer-events:none; opacity:0;
+      font-size:16px; opacity:0;
     `).setDepth(65).setVisible(false);
 
     const ji = this.joinCodeInput = this.joinCodeDom.node as HTMLInputElement;
     ji.maxLength = 5;
     ji.autocomplete = 'off';
-    ji.addEventListener('input',   () => this._onCodeInput());
+    ji.setAttribute('inputmode', 'text');
+    ji.addEventListener('focus', () => {
+      window.scrollTo(0, 0);
+      setTimeout(() => { window.scrollTo(0, 0); }, 50);
+      setTimeout(() => { window.scrollTo(0, 0); }, 150);
+    });
+    ji.addEventListener('input',   () => { this._onCodeInput(); window.scrollTo(0, 0); });
     ji.addEventListener('keydown', (e) => {
       if (e.key === 'Enter')  this._doJoin();
       if (e.key === 'Escape') this._closeJoinModal();
     });
+    ji.addEventListener('blur', () => { window.scrollTo(0, 0); });
 
     /* ── KATIL butonu ── */
     const joinActionBtn = this._bigBtn(CX, 565, t().joinBtn, 0xff8800, () => this._doJoin());
