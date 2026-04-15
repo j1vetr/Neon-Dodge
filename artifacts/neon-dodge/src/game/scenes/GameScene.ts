@@ -31,6 +31,7 @@ import {
   startAmbient, updateAmbientLevel, stopAmbient,
   initSound, setSoundEnabled, isSoundEnabled,
 } from '../audio';
+import { hapticTap, hapticCollect, hapticDeath, hapticShieldBreak } from '../native';
 
 /* ---- Types ---- */
 interface Obstacle {
@@ -462,6 +463,7 @@ export class GameScene extends Phaser.Scene {
     this.dirX *= -1;
     this.playerVX = PLAYER_HORIZONTAL_SPEED * this._lerpNum('playerSpeedMult') * this.dirX;
     playTap();
+    hapticTap();
 
     const base = this.shrinkActive ? POWERUP_SHRINK_SCALE : 1;
     this.tweens.add({
@@ -806,6 +808,7 @@ export class GameScene extends Phaser.Scene {
   private _collectPowerUp(pu: PowerUp) {
     pu.collected = true;
     playPowerUp(pu.type);
+    hapticCollect();
 
     const colorMap: Record<string, number> = { shield: COLOR_SHIELD, double: COLOR_DOUBLE, shrink: COLOR_SHRINK };
     const c = colorMap[pu.type];
@@ -847,6 +850,7 @@ export class GameScene extends Phaser.Scene {
     this.shieldCount = Math.max(this.shieldCount - 1, 0);
     this.invincibleUntil = this.time.now + 900;
     playShieldHit();
+    hapticShieldBreak();
     this.cameras.main.shake(200, 0.010);
     this._updateShieldVisuals();
 
@@ -1257,6 +1261,7 @@ export class GameScene extends Phaser.Scene {
   private _onDeath() {
     this.alive = false;
     stopAmbient();
+    hapticDeath();
 
     this.combo = 0;
     this.comboMultiplier = 1;

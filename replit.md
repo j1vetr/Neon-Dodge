@@ -29,7 +29,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `game/scenes/GameScene.ts` — core gameplay loop
   - `game/scenes/GameOverScene.ts` — game over + watch ad placeholder
   - `App.tsx` — React shell that mounts Phaser canvas
-- **Features**: tap to switch direction, neon obstacles + lasers, slow-motion near-miss, particle trail, screen shake, 5-skin system, high score in localStorage, Web Audio sound effects, responsive/mobile-ready
+- **Features**: tap to switch direction, neon obstacles + lasers, slow-motion near-miss, particle trail, screen shake, 5-skin system, high score in localStorage, Web Audio sound effects, responsive/mobile-ready, multiplayer lobby (Socket.io), planet backgrounds, shrink power-up
+- **Capacitor (Android native)**:
+  - Config: `capacitor.config.ts` — appId `tr.com.toov.neon.twa`, webDir `dist/public`
+  - Native bridge: `src/game/native.ts` — haptic feedback, status bar, keep awake, screen orientation
+  - Plugins: `@capacitor/haptics`, `@capacitor/status-bar`, `@capacitor/screen-orientation`, `@capacitor-community/keep-awake`
+  - Keystore: `/root/neondodge-android/android.keystore`, alias `android`
+  - Build: `pnpm cap:build` (builds web + syncs to android)
 
 ## Key Commands
 

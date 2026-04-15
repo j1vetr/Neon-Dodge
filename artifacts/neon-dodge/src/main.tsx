@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initNative } from "./game/native";
 
 /* Suppress "Cannot suspend/resume a closed AudioContext" unhandled rejections.
    These are harmless HMR artefacts: when Vite hot-reloads, the old Phaser
@@ -21,4 +22,6 @@ document.addEventListener('touchmove',   _blockScroll, { passive: false });
 document.addEventListener('touchend',    _blockScroll, { passive: false });
 document.addEventListener('touchcancel', _blockScroll, { passive: false });
 
-createRoot(document.getElementById("root")!).render(<App />);
+initNative().then(() => {
+  createRoot(document.getElementById("root")!).render(<App />);
+});
