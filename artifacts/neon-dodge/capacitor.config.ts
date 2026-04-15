@@ -24,14 +24,8 @@ const config: CapacitorConfig = {
       orientation: 'portrait',
     },
     SplashScreen: {
-      launchAutoHide: false,
-      launchShowDuration: 3000,
-      backgroundColor: '#000000',
-      showSpinner: false,
-      androidSplashResourceName: 'splash',
-      splashFullScreen: true,
-      splashImmersive: true,
-      launchFadeOutDuration: 300,
+      launchShowDuration: 0,
+      launchAutoHide: true,
     },
     Keyboard: {
       resize: 'none',

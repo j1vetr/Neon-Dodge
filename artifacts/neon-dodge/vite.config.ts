@@ -20,7 +20,7 @@ export default defineConfig({
       injectRegister: 'script',
       manifest: false,
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico,woff,woff2,mp3,ogg,wav}'],
