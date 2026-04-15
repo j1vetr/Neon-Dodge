@@ -153,10 +153,15 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private offlineBanner?: Phaser.GameObjects.Container;
+  private isOffline = false;
 
   private _checkConnection() {
     isOnline().then(online => {
-      if (!online) this._showOfflineBanner();
+      if (!online) {
+        this.isOffline = true;
+        this._showOfflineBanner();
+        this._updateBtnDisabled();
+      }
     });
   }
 
@@ -200,6 +205,8 @@ export class MultiLobbyScene extends Phaser.Scene {
       callback: () => {
         isOnline().then(online => {
           if (online && this.offlineBanner) {
+            this.isOffline = false;
+            this._updateBtnDisabled();
             this.tweens.add({
               targets: this.offlineBanner, alpha: 0, duration: 300,
               onComplete: () => { this.offlineBanner?.destroy(true); this.offlineBanner = undefined; },
@@ -208,6 +215,12 @@ export class MultiLobbyScene extends Phaser.Scene {
         });
       },
     });
+  }
+
+  private _updateBtnDisabled() {
+    const off = this.isOffline;
+    this.createBtn?.setAlpha(off ? 0.3 : 1);
+    this.joinBtn?.setAlpha(off ? 0.3 : 1);
   }
 
   shutdown() {
@@ -443,10 +456,8 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.joinBtn = this._bigBtn(CX, 730, t().joinRoom, 0xff8800, () => this._openJoinModal());
     c.add(this.joinBtn);
 
-    /* ── BACK ── */
-    c.add(this._backBtn(CX, H - 80, () => {
-      this._leaveAndGoHome();
-    }));
+    /* ── SOL ÜST CHEVRON ── */
+    c.add(this._chevronBack(() => this._leaveAndGoHome()));
   }
 
   /* ==============================================================
@@ -703,10 +714,8 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.startBtnLabel = this.startBtn.getByName('lbl') as Phaser.GameObjects.Text;
     this.startBtnLabel?.setStyle({ color: '#ffffff' });
 
-    /* Geri butonu */
-    c.add(this._backBtn(CX, botY + 210, () => {
-      this._leaveAndGoHome();
-    }));
+    /* ── SOL ÜST CHEVRON ── */
+    c.add(this._chevronBack(() => this._leaveAndGoHome()));
   }
 
   /* Oda kodunu 5 kutuya dağıt */
@@ -769,9 +778,8 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._showPhase('waiting');
     }));
 
-    c.add(this._backBtn(CX, 1260, () => {
-      this._leaveAndGoHome();
-    }));
+    /* ── SOL ÜST CHEVRON ── */
+    c.add(this._chevronBack(() => this._leaveAndGoHome()));
   }
 
   /* ==============================================================
@@ -906,6 +914,7 @@ export class MultiLobbyScene extends Phaser.Scene {
      ENTRY ACTIONS
   ============================================================== */
   private _doCreate() {
+    if (this.isOffline) { this._showError(t().noInternet); return; }
     const name = this._getValidName();
     if (!name) return;
     isOnline().then(online => {
@@ -920,6 +929,7 @@ export class MultiLobbyScene extends Phaser.Scene {
   }
 
   private _doJoin() {
+    if (this.isOffline) { this._showError(t().noInternet); return; }
     const name = this._getValidName();
     if (!name) return;
     const code = this.joinCodeInput.value.toUpperCase().trim();
@@ -1222,15 +1232,44 @@ export class MultiLobbyScene extends Phaser.Scene {
     return this.add.container(x, y, [bg, bdr, top, lbl, hit]);
   }
 
-  private _backBtn(x: number, y: number, cb: () => void) {
-    const text = this.add.text(x, y, t().mainMenuShort, {
-      fontSize: '20px', fontFamily: '"Orbitron",monospace',
-      color: '#2a3a44', letterSpacing: 2,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    text.on('pointerover', () => text.setStyle({ color: '#55778a' }));
-    text.on('pointerout',  () => text.setStyle({ color: '#2a3a44' }));
-    text.on('pointerdown', cb);
-    return text;
+  private _chevronBack(cb: () => void): Phaser.GameObjects.Container {
+    const cx = 52, cy = 48;
+    const pw = 120, ph = 52;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0614, 0.7);
+    bg.fillRoundedRect(cx - 14, cy - ph / 2, pw, ph, 14);
+    bg.lineStyle(1.5, 0xff8800, 0.35);
+    bg.strokeRoundedRect(cx - 14, cy - ph / 2, pw, ph, 14);
+
+    const chevron = this.add.text(cx, cy, '‹', {
+      fontSize: '36px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+      color: '#ff8800',
+    }).setOrigin(0, 0.5);
+
+    const label = this.add.text(cx + 30, cy, t().back, {
+      fontSize: '16px', fontFamily: '"Orbitron",monospace', fontStyle: 'bold',
+      color: '#ff8800', letterSpacing: 2,
+    }).setOrigin(0, 0.5);
+
+    const hit = this.add.rectangle(cx - 14 + pw / 2, cy, pw + 16, ph + 12, 0, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => {
+      chevron.setStyle({ color: '#ffaa44' });
+      label.setStyle({ color: '#ffaa44' });
+    });
+    hit.on('pointerout', () => {
+      chevron.setStyle({ color: '#ff8800' });
+      label.setStyle({ color: '#ff8800' });
+    });
+    hit.on('pointerdown', () => {
+      this.tweens.add({
+        targets: [chevron, label], x: '-=6',
+        duration: 60, yoyo: true, onComplete: cb,
+      });
+    });
+
+    return this.add.container(0, 0, [bg, chevron, label, hit]).setDepth(50);
   }
 
   private _neonTitle(
