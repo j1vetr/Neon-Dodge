@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
       keystorePath: '/root/neondodge-android/android.keystore',
       keystoreAlias: 'android',
     },
+    backgroundColor: '#000000',
   },
   plugins: {
     StatusBar: {
@@ -22,6 +23,15 @@ const config: CapacitorConfig = {
     },
     ScreenOrientation: {
       orientation: 'portrait',
+    },
+    SplashScreen: {
+      launchAutoHide: true,
+      launchShowDuration: 0,
+      backgroundColor: '#000000',
+      showSpinner: false,
+      androidSplashResourceName: 'splash',
+      splashFullScreen: true,
+      splashImmersive: true,
     },
     KeepAwake: {},
     Haptics: {},
