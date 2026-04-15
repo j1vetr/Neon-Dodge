@@ -7,22 +7,25 @@ let _statusBarPlugin: any = null;
 let _keepAwakePlugin: any = null;
 let _screenOrientationPlugin: any = null;
 let _splashPlugin: any = null;
+let _networkPlugin: any = null;
 
 async function loadPlugins() {
   if (!isNative) return;
   try {
-    const [h, sb, ka, so, sp] = await Promise.all([
+    const [h, sb, ka, so, sp, nw] = await Promise.all([
       import('@capacitor/haptics'),
       import('@capacitor/status-bar'),
       import('@capacitor-community/keep-awake'),
       import('@capacitor/screen-orientation'),
       import('@capacitor/splash-screen'),
+      import('@capacitor/network'),
     ]);
     _hapticsPlugin = h.Haptics;
     _statusBarPlugin = sb.StatusBar;
     _keepAwakePlugin = ka.KeepAwake;
     _screenOrientationPlugin = so.ScreenOrientation;
     _splashPlugin = sp.SplashScreen;
+    _networkPlugin = nw.Network;
   } catch (e) {
     console.warn('[native] plugin load failed', e);
   }
@@ -52,6 +55,18 @@ export async function initNative(): Promise<void> {
 export async function hideSplash(): Promise<void> {
   if (!isNative || !_splashPlugin) return;
   try { await _splashPlugin.hide({ fadeOutDuration: 300 }); } catch {}
+}
+
+export async function isOnline(): Promise<boolean> {
+  if (!isNative || !_networkPlugin) {
+    return navigator.onLine;
+  }
+  try {
+    const status = await _networkPlugin.getStatus();
+    return status.connected;
+  } catch {
+    return navigator.onLine;
+  }
 }
 
 export async function releaseNative(): Promise<void> {

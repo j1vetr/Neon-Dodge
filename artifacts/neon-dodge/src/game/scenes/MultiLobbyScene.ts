@@ -8,6 +8,7 @@ import {
 } from '../multiState';
 import { GAME_WIDTH, GAME_HEIGHT, COLOR_BG, STORAGE_SKIN } from '../constants';
 import { t } from '../i18n';
+import { isOnline } from '../native';
 
 const W  = GAME_WIDTH;    // 800
 const H  = GAME_HEIGHT;   // 1400
@@ -842,9 +843,15 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _doCreate() {
     const name = this._getValidName();
     if (!name) return;
-    localStorage.setItem(STORAGE_NAME, name);
-    this.createBtnLbl?.setText(t().creating);
-    getSocket().emit('create-room', { name, skin: SKIN_KEYS[this.selectedSkin] });
+    isOnline().then(online => {
+      if (!online) {
+        this._showError(t().noInternet ?? 'İnternet bağlantısı yok. Çok oyunculu mod için internet gerekli.');
+        return;
+      }
+      localStorage.setItem(STORAGE_NAME, name);
+      this.createBtnLbl?.setText(t().creating);
+      getSocket().emit('create-room', { name, skin: SKIN_KEYS[this.selectedSkin] });
+    });
   }
 
   private _doJoin() {
@@ -856,8 +863,14 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._shakeCodeBoxes();
       return;
     }
-    localStorage.setItem(STORAGE_NAME, name);
-    getSocket().emit('join-room', { code, name, skin: SKIN_KEYS[this.selectedSkin] });
+    isOnline().then(online => {
+      if (!online) {
+        this._showError(t().noInternet ?? 'İnternet bağlantısı yok. Çok oyunculu mod için internet gerekli.');
+        return;
+      }
+      localStorage.setItem(STORAGE_NAME, name);
+      getSocket().emit('join-room', { code, name, skin: SKIN_KEYS[this.selectedSkin] });
+    });
   }
 
   private _getValidName(): string | null {
