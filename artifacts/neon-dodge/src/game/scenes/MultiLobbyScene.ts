@@ -150,6 +150,65 @@ export class MultiLobbyScene extends Phaser.Scene {
     if (this.phase === 'results' && this.incomingResults) this._renderResults(this.incomingResults);
     if (this.phase === 'waiting') this._renderPlayerList();
 
+    this._checkConnection();
+  }
+
+  private offlineBanner?: Phaser.GameObjects.Container;
+
+  private _checkConnection() {
+    isOnline().then(online => {
+      if (!online) this._showOfflineBanner();
+    });
+  }
+
+  private _showOfflineBanner() {
+    if (this.offlineBanner) return;
+
+    const bw = W - 60;
+    const bh = 80;
+    const by = H - 140;
+
+    const c = this.offlineBanner = this.add.container(0, 0).setDepth(100);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x220000, 0.92);
+    bg.fillRoundedRect(CX - bw / 2, by, bw, bh, 16);
+    bg.lineStyle(2, 0xff4466, 0.8);
+    bg.strokeRoundedRect(CX - bw / 2, by, bw, bh, 16);
+    c.add(bg);
+
+    const icon = this.add.text(CX - bw / 2 + 24, by + bh / 2, '⚠', {
+      fontSize: '32px',
+    }).setOrigin(0, 0.5);
+    c.add(icon);
+
+    const msg = this.add.text(CX, by + bh / 2, t().noInternet, {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '18px',
+      color: '#ff6688',
+      align: 'center',
+      wordWrap: { width: bw - 80 },
+    }).setOrigin(0.5, 0.5);
+    c.add(msg);
+
+    this.tweens.add({
+      targets: c, alpha: { from: 0, to: 1 }, duration: 400, ease: 'Sine.easeOut',
+    });
+
+    this.time.addEvent({
+      delay: 5000,
+      loop: true,
+      callback: () => {
+        isOnline().then(online => {
+          if (online && this.offlineBanner) {
+            this.tweens.add({
+              targets: this.offlineBanner, alpha: 0, duration: 300,
+              onComplete: () => { this.offlineBanner?.destroy(true); this.offlineBanner = undefined; },
+            });
+          }
+        });
+      },
+    });
   }
 
   shutdown() {
