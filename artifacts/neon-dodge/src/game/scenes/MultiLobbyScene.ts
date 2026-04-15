@@ -38,10 +38,9 @@ export class MultiLobbyScene extends Phaser.Scene {
   private nameCounter!:Phaser.GameObjects.Text;
   private nameBorder!: Phaser.GameObjects.Graphics;
   private nameHitBox!: Phaser.GameObjects.Rectangle;
-  private nameDomEl!:  Phaser.GameObjects.DOMElement;   /* mobil klavye için */
+  private nameInput!:  HTMLInputElement;
 
   /* Entry — join code modal */
-  private joinCodeDom!:   Phaser.GameObjects.DOMElement;
   private joinCodeInput!: HTMLInputElement;
   private codeBoxes:      Phaser.GameObjects.Graphics[]    = [];
   private codeLetters:    Phaser.GameObjects.Text[]        = [];
@@ -217,9 +216,10 @@ export class MultiLobbyScene extends Phaser.Scene {
     s.off('room-created');  s.off('room-joined');  s.off('room-error');
     s.off('player-joined'); s.off('player-left');
     s.off('game-starting'); s.off('game-over');    s.off('lobby-reset'); s.off('room-destroyed');
-    this.joinCodeDom?.destroy();
-    this.nameDomEl?.destroy();
     this.joinCodeInput?.blur();
+    this.joinCodeInput?.remove();
+    this.nameInput?.blur();
+    this.nameInput?.remove();
     this.nameActive = false;
   }
 
@@ -360,24 +360,22 @@ export class MultiLobbyScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     c.add(this.nameHitBox);
 
-    /* ── AD DOM INPUT — mobilde klavye açmak için ── */
-    this.nameDomEl = this.add.dom(CX, 0, 'input', `
-      position:fixed; top:0; left:-9999px;
-      width:1px; height:1px;
-      background:transparent; border:none; outline:none;
-      color:transparent; caret-color:transparent;
-      font-size:16px; opacity:0;
-    `).setDepth(30);
-    const ni = this.nameDomEl.node as HTMLInputElement;
+    /* ── AD INPUT — doğrudan body'ye eklenir (Phaser DOM dışında) ── */
+    const ni = this.nameInput = document.createElement('input');
+    ni.type = 'text';
     ni.maxLength = 8;
     ni.autocomplete = 'off';
-    ni.setAttribute('inputmode', 'text');
-    (ni as any).spellcheck = false;
-    ni.addEventListener('focus', () => {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-      document.documentElement.scrollTop = 0;
+    ni.inputMode = 'text';
+    ni.spellcheck = false;
+    Object.assign(ni.style, {
+      position: 'fixed', top: '0px', left: '-9999px',
+      width: '1px', height: '1px', opacity: '0',
+      fontSize: '16px', border: 'none', outline: 'none',
+      background: 'transparent', color: 'transparent',
+      caretColor: 'transparent', pointerEvents: 'none',
+      zIndex: '-1',
     });
+    document.body.appendChild(ni);
     ni.addEventListener('input', () => {
       const v = ni.value.toUpperCase().replace(/[^A-Z0-9ÇĞİÖŞÜ ]/g, '').slice(0, 8);
       ni.value = v;
@@ -386,22 +384,17 @@ export class MultiLobbyScene extends Phaser.Scene {
       this._updateCounter();
       this._drawNameBorder(0xff8800, 0.45);
       this.errorTxt?.setAlpha(0);
-      window.scrollTo(0, 0);
     });
     ni.addEventListener('focus', () => {
       this.nameActive = true;
       this._drawNameBorder(0xff8800, 0.9);
       this._renderNameTxt();
-      setTimeout(() => { window.scrollTo(0, 0); }, 50);
-      setTimeout(() => { window.scrollTo(0, 0); }, 150);
-      setTimeout(() => { window.scrollTo(0, 0); }, 300);
     });
     ni.addEventListener('blur', () => {
       this.nameActive = false;
       this.cursorOn = false;
       this._drawNameBorder(0xff8800, 0.5);
       this._renderNameTxt();
-      window.scrollTo(0, 0);
     });
     ni.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter') { ni.blur(); this._doCreate(); }
@@ -521,30 +514,27 @@ export class MultiLobbyScene extends Phaser.Scene {
     codeHit.on('pointerdown', () => this.joinCodeInput?.focus());
     c.add(codeHit);
 
-    /* ── DOM input (görünmez, klavye için) ── */
-    this.joinCodeDom = this.add.dom(CX, 0, 'input', `
-      position:fixed; top:0; left:-9999px;
-      width:1px; height:1px;
-      background:transparent; border:none; outline:none;
-      color:transparent; caret-color:transparent;
-      font-size:16px; opacity:0;
-    `).setDepth(65).setVisible(false);
-
-    const ji = this.joinCodeInput = this.joinCodeDom.node as HTMLInputElement;
+    /* ── JOIN CODE INPUT — doğrudan body'ye eklenir ── */
+    const ji = this.joinCodeInput = document.createElement('input');
+    ji.type = 'text';
     ji.maxLength = 5;
     ji.autocomplete = 'off';
-    ji.setAttribute('inputmode', 'text');
-    ji.addEventListener('focus', () => {
-      window.scrollTo(0, 0);
-      setTimeout(() => { window.scrollTo(0, 0); }, 50);
-      setTimeout(() => { window.scrollTo(0, 0); }, 150);
+    ji.inputMode = 'text';
+    ji.spellcheck = false;
+    Object.assign(ji.style, {
+      position: 'fixed', top: '0px', left: '-9999px',
+      width: '1px', height: '1px', opacity: '0',
+      fontSize: '16px', border: 'none', outline: 'none',
+      background: 'transparent', color: 'transparent',
+      caretColor: 'transparent', pointerEvents: 'none',
+      zIndex: '-1',
     });
-    ji.addEventListener('input',   () => { this._onCodeInput(); window.scrollTo(0, 0); });
+    document.body.appendChild(ji);
+    ji.addEventListener('input',   () => this._onCodeInput());
     ji.addEventListener('keydown', (e) => {
       if (e.key === 'Enter')  this._doJoin();
       if (e.key === 'Escape') this._closeJoinModal();
     });
-    ji.addEventListener('blur', () => { window.scrollTo(0, 0); });
 
     /* ── KATIL butonu ── */
     const joinActionBtn = this._bigBtn(CX, 565, t().joinBtn, 0xff8800, () => this._doJoin());
@@ -564,7 +554,6 @@ export class MultiLobbyScene extends Phaser.Scene {
     if (!this.joinModal) return;
     this.joinCodeInput.value = '';
     this._updateCodeBoxes('');
-    this.joinCodeDom.setVisible(true);
     this.joinModal.setVisible(true).setAlpha(0);
     this.tweens.add({ targets: this.joinModal, alpha: 1, duration: 200, ease: 'Sine.easeOut' });
     this.time.delayedCall(250, () => this.joinCodeInput?.focus());
@@ -573,7 +562,6 @@ export class MultiLobbyScene extends Phaser.Scene {
   private _closeJoinModal() {
     if (!this.joinModal) return;
     this.joinCodeInput?.blur();
-    this.joinCodeDom?.setVisible(false);
     this.tweens.add({
       targets: this.joinModal, alpha: 0, duration: 160, ease: 'Sine.easeIn',
       onComplete: () => this.joinModal?.setVisible(false),
@@ -904,16 +892,13 @@ export class MultiLobbyScene extends Phaser.Scene {
     this.waitingContainer?.setVisible(ph === 'waiting');
     this.resultsContainer?.setVisible(ph === 'results');
 
-    /* Phase değişince modal kapat, DOM'ları gizle */
+    /* Phase değişince modal kapat */
     if (ph !== 'entry') {
       this.joinModal?.setVisible(false);
-      this.joinCodeDom?.setVisible(false);
       this.joinCodeInput?.blur();
-      this.nameDomEl?.setVisible(false);
+      this.nameInput?.blur();
       this.nameActive = false;
       this.cursorOn = false;
-    } else {
-      this.nameDomEl?.setVisible(true);
     }
   }
 
