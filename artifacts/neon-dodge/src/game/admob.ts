@@ -7,7 +7,7 @@ import {
   AdMobRewardItem,
 } from '@capacitor-community/admob';
 
-const TEST_REWARDED_ID = 'ca-app-pub-3940256099942544/5224354917';
+const REWARDED_ID = 'ca-app-pub-6688478170415368/4504616167';
 
 let initialized = false;
 let rewardedLoaded = false;
@@ -19,7 +19,7 @@ export async function initAdMob(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
   await AdMob.initialize({
-    initializeForTesting: true,
+    initializeForTesting: false,
   });
 
   AdMob.addListener(RewardAdPluginEvents.Loaded, (_info: AdLoadInfo) => {
@@ -56,8 +56,8 @@ export async function prepareRewarded(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
     const options: RewardAdOptions = {
-      adId: TEST_REWARDED_ID,
-      isTesting: true,
+      adId: REWARDED_ID,
+      isTesting: false,
     };
     await AdMob.prepareRewardVideoAd(options);
   } catch (_e) {
